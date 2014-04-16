@@ -25,8 +25,9 @@ c
 c     update the vdw and electrostatic neighbor lists
 c
       if (use_vdw .and. use_vlist)  call vlist
-      if (use_charge .and. use_clist)  call clist
-      if ((use_mpole.or.use_polar) .and. use_mlist)  call mlist
+      if ((use_charge.or.use_solv) .and. use_clist)  call clist
+      if ((use_mpole.or.use_polar.or.use_solv) .and. use_mlist)
+     &      call mlist
       if (use_polar .and. use_ulist)  call ulist
       return
       end
@@ -51,6 +52,7 @@ c
       include 'boxes.i'
       include 'iounit.i'
       include 'neigh.i'
+      include 'openmp.i'
       include 'vdw.i'
       integer i,j,k
       integer ii,iv
@@ -61,6 +63,7 @@ c
       real*8, allocatable :: xred(:)
       real*8, allocatable :: yred(:)
       real*8, allocatable :: zred(:)
+      logical parallel
 c
 c
 c     perform dynamic allocation of some local arrays
@@ -91,14 +94,23 @@ c
          call fatal
       end if
 c
+c     choose between serial and parallel list building
+c
+      parallel = .false.
+      if (nthread .gt. 1)  parallel = .true.
+c
 c     perform a complete list build instead of an update
 c
       if (dovlst) then
          dovlst = .false.
-         if (octahedron) then
+         if (parallel .or. octahedron) then
+!$OMP PARALLEL default(private) shared(nvdw,xred,yred,zred)
+!$OMP DO schedule(guided)
             do i = 1, nvdw
                call vbuild (i,xred,yred,zred)
             end do
+!$OMP END DO
+!$OMP END PARALLEL
          else
             call vlight (xred,yred,zred)
          end if
@@ -107,6 +119,8 @@ c
 c
 c     test each site for displacement exceeding half the buffer
 c
+!$OMP PARALLEL default(shared) private(i,j,k,xi,yi,zi,xr,yr,zr,r2)
+!$OMP DO schedule(guided)
       do i = 1, nvdw
          xi = xred(i)
          yi = yred(i)
@@ -161,14 +175,18 @@ c
                   do j = 1, nvlst(k)
                      if (vlst(j,k) .eq. i)  goto 30
                   end do
+!$OMP CRITICAL
                   nvlst(k) = nvlst(k) + 1
                   vlst(nvlst(k),k) = i
+!$OMP END CRITICAL
    30             continue
                else if (r2 .le. vbufx) then
                   do j = 1, nvlst(k)
                      if (vlst(j,k) .eq. i) then
+!$OMP CRITICAL
                         vlst(j,k) = vlst(nvlst(k),k)
                         nvlst(k) = nvlst(k) - 1
+!$OMP END CRITICAL
                         goto 40
                      end if
                   end do
@@ -177,6 +195,8 @@ c
             end do
          end if
       end do
+!$OMP END DO
+!$OMP END PARALLEL
 c
 c     perform deallocation of some local arrays
 c
@@ -404,10 +424,12 @@ c
       include 'charge.i'
       include 'iounit.i'
       include 'neigh.i'
+      include 'openmp.i'
       integer i,j,k,ii
       real*8 xi,yi,zi
       real*8 xr,yr,zr
       real*8 radius,r2
+      logical parallel
 c
 c
 c     neighbor list cannot be used with the replicates method
@@ -421,14 +443,23 @@ c
          call fatal
       end if
 c
+c     choose between serial and parallel list building
+c
+      parallel = .false.
+      if (nthread .gt. 1)  parallel = .true.
+c
 c     perform a complete list build instead of an update
 c
       if (doclst) then
          doclst = .false.
-         if (octahedron) then
+         if (parallel .or. octahedron) then
+!$OMP PARALLEL default(private) shared(nion)
+!$OMP DO schedule(guided)
             do i = 1, nion
                call cbuild (i)
             end do
+!$OMP END DO
+!$OMP END PARALLEL
          else
             call clight
          end if
@@ -437,6 +468,8 @@ c
 c
 c     test each site for displacement exceeding half the buffer
 c
+!$OMP PARALLEL default(shared) private(i,j,k,xi,yi,zi,xr,yr,zr,r2)
+!$OMP DO schedule(guided)
       do i = 1, nion
          ii = kion(i)
          xi = x(ii)
@@ -492,14 +525,18 @@ c
                   do j = 1, nelst(k)
                      if (elst(j,k) .eq. i)  goto 30
                   end do
+!$OMP CRITICAL
                   nelst(k) = nelst(k) + 1
                   elst(nelst(k),k) = i
+!$OMP END CRITICAL
    30             continue
                else if (r2 .le. cbufx) then
                   do j = 1, nelst(k)
                      if (elst(j,k) .eq. i) then
+!$OMP CRITICAL
                         elst(j,k) = elst(nelst(k),k)
                         nelst(k) = nelst(k) - 1
+!$OMP END CRITICAL
                         goto 40
                      end if
                   end do
@@ -508,6 +545,8 @@ c
             end do
          end if
       end do
+!$OMP END DO
+!$OMP END PARALLEL
       return
       end
 c
@@ -730,10 +769,12 @@ c
       include 'iounit.i'
       include 'mpole.i'
       include 'neigh.i'
+      include 'openmp.i'
       integer i,j,k,ii
       real*8 xi,yi,zi
       real*8 xr,yr,zr
       real*8 radius,r2
+      logical parallel
 c
 c
 c     neighbor list cannot be used with the replicates method
@@ -747,14 +788,23 @@ c
          call fatal
       end if
 c
+c     choose between serial and parallel list building
+c
+      parallel = .false.
+      if (nthread .gt. 1)  parallel = .true.
+c
 c     perform a complete list build instead of an update
 c
       if (domlst) then
          domlst = .false.
-         if (octahedron) then
+         if (parallel .or. octahedron) then
+!$OMP PARALLEL default(shared) private(i)
+!$OMP DO schedule(guided)
             do i = 1, npole
                call mbuild (i)
             end do
+!$OMP END DO
+!$OMP END PARALLEL
          else
             call mlight
          end if
@@ -763,6 +813,8 @@ c
 c
 c     test each site for displacement exceeding half the buffer
 c
+!$OMP PARALLEL default(shared) private(i,j,k,xi,yi,zi,xr,yr,zr,r2)
+!$OMP DO schedule(guided)
       do i = 1, npole
          ii = ipole(i)
          xi = x(ii)
@@ -818,14 +870,18 @@ c
                   do j = 1, nelst(k)
                      if (elst(j,k) .eq. i)  goto 30
                   end do
+!$OMP CRITICAL
                   nelst(k) = nelst(k) + 1
                   elst(nelst(k),k) = i
+!$OMP END CRITICAL
    30             continue
                else if (r2 .le. mbufx) then
                   do j = 1, nelst(k)
                      if (elst(j,k) .eq. i) then
+!$OMP CRITICAL
                         elst(j,k) = elst(nelst(k),k)
                         nelst(k) = nelst(k) - 1
+!$OMP END CRITICAL
                         goto 40
                      end if
                   end do
@@ -834,6 +890,8 @@ c
             end do
          end if
       end do
+!$OMP END DO
+!$OMP END PARALLEL
       return
       end
 c
@@ -1056,10 +1114,12 @@ c
       include 'iounit.i'
       include 'mpole.i'
       include 'neigh.i'
+      include 'openmp.i'
       integer i,j,k,ii
       real*8 xi,yi,zi
       real*8 xr,yr,zr
       real*8 radius,r2
+      logical parallel
 c
 c
 c     neighbor list cannot be used with the replicates method
@@ -1073,14 +1133,23 @@ c
          call fatal
       end if
 c
+c     choose between serial and parallel list building
+c
+      parallel = .false.
+      if (nthread .gt. 1)  parallel = .true.
+c
 c     perform a complete list build instead of an update
 c
       if (doulst) then
          doulst = .false.
-         if (octahedron) then
+         if (parallel .or. octahedron) then
+!$OMP PARALLEL default(shared) private(i)
+!$OMP DO schedule(guided)
             do i = 1, npole
                call ubuild (i)
             end do
+!$OMP END DO
+!$OMP END PARALLEL
          else
             call ulight
          end if
@@ -1089,6 +1158,8 @@ c
 c
 c     test each site for displacement exceeding half the buffer
 c
+!$OMP PARALLEL default(shared) private(i,j,k,xi,yi,zi,xr,yr,zr,r2)
+!$OMP DO schedule(guided)
       do i = 1, npole
          ii = ipole(i)
          xi = x(ii)
@@ -1144,14 +1215,18 @@ c
                   do j = 1, nulst(k)
                      if (ulst(j,k) .eq. i)  goto 30
                   end do
+!$OMP CRITICAL
                   nulst(k) = nulst(k) + 1
                   ulst(nulst(k),k) = i
+!$OMP END CRITICAL
    30             continue
                else if (r2 .le. ubufx) then
                   do j = 1, nulst(k)
                      if (ulst(j,k) .eq. i) then
+!$OMP CRITICAL
                         ulst(j,k) = ulst(nulst(k),k)
                         nulst(k) = nulst(k) - 1
+!$OMP END CRITICAL
                         goto 40
                      end if
                   end do
@@ -1160,6 +1235,8 @@ c
             end do
          end if
       end do
+!$OMP END DO
+!$OMP END PARALLEL
       return
       end
 c

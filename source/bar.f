@@ -39,7 +39,7 @@ c
       include 'iounit.i'
       include 'keys.i'
       include 'units.i'
-      integer i,j,k,m
+      integer i,j,k
       integer n1,n2
       integer ixyz,nbst
       integer iter,maxiter
@@ -188,19 +188,17 @@ c
       call suffix (xyzfile,'xyz','old')
       open (unit=ixyz,file=xyzfile,status ='old')
       rewind (unit=ixyz)
-      m = (n1+1) * (start1-1)
-      do i = 1, m
-         read (ixyz,*,err=90,end=90)
+      do i = 1, start1-1
+         call readxyz (ixyz)
       end do
-   90 continue
       call readxyz (ixyz)
       nkey = nkey1
       do i = 1, nkey
          keyline(i) = keys1(i)
       end do
       if (abort) then
-         write (iout,100)
-  100    format (/,' BAR  --  No Coordinate Frames Available',
+         write (iout,90)
+   90    format (/,' BAR  --  No Coordinate Frames Available',
      &              ' from First Input File')
          call fatal
       end if
@@ -208,8 +206,8 @@ c
 c
 c     find potential energies for trajectory A in state A
 c
-      write (iout,110)
-  110 format (/,' Initial Processing for Trajectory A :',/)
+      write (iout,100)
+  100 format (/,' Initial Processing for Trajectory A :',/)
       j = 0
       k = start1 - 1
       do while (.not. abort)
@@ -217,28 +215,24 @@ c
          k = k + 1
          call cutoffs
          ua0(j) = energy ()
-         m = (n1+1) * (step1-1)
-         do i = 1, m
-            read (ixyz,*,err=120,end=120)
+         do i = 1, step1-1
+            call readxyz (ixyz)
          end do
-  120    continue
          call readxyz (ixyz)
          k = k + step1 - 1
          if (k .ge. stop1)  abort = .true.
          if (mod(j,100).eq.0 .or. abort) then
-            write (iout,130)  j
-  130       format (7x,'Completed',i8,' Coordinate Frames')
+            write (iout,110)  j
+  110       format (7x,'Completed',i8,' Coordinate Frames')
          end if
       end do
 c
 c     reset trajectory A and process the initial structure
 c
       rewind (unit=ixyz)
-      m = (n1+1) * (start1-1)
-      do i = 1, m
-         read (ixyz,*,err=140,end=140)
+      do i = 1, start1-1
+         call readxyz (ixyz)
       end do
-  140 continue
       call readxyz (ixyz)
       nkey = nkey2
       do i = 1, nkey
@@ -248,8 +242,8 @@ c
 c
 c     find potential energies for trajectory A in state B
 c
-      write (iout,150)
-  150 format (/,' Potential Energy Values for Trajectory A :',
+      write (iout,120)
+  120 format (/,' Potential Energy Values for Trajectory A :',
      &        //,7x,'Frame',9x,'State A',9x,'State B',12x,'Delta',/)
       j = 0
       k = start1 - 1
@@ -258,13 +252,11 @@ c
          k = k + 1
          call cutoffs
          ua1(j) = energy ()
-         write (iout,160)  k,ua0(j),ua1(j),ua1(j)-ua0(j)
-  160    format (i11,2x,3f16.4)
-         m = (n1+1) * (step1-1)
-         do i = 1, m
-            read (ixyz,*,err=170,end=170)
+         write (iout,130)  k,ua0(j),ua1(j),ua1(j)-ua0(j)
+  130    format (i11,2x,3f16.4)
+         do i = 1, step1-1
+            call readxyz (ixyz)
          end do
-  170    continue
          call readxyz (ixyz)
          k = k + step1 - 1
          if (k .ge. stop1)  abort = .true.
@@ -280,19 +272,17 @@ c
       call suffix (xyzfile,'xyz','old')
       open (unit=ixyz,file=xyzfile,status ='old')
       rewind (unit=ixyz)
-      m = (n2+1) * (start2-1)
-      do i = 1, m
-         read (ixyz,*,err=180,end=180)
+      do i = 1, start2-1
+         call readxyz (ixyz)
       end do
-  180 continue
       call readxyz (ixyz)
       nkey = nkey1
       do i = 1, nkey
          keyline(i) = keys1(i)
       end do
       if (abort) then
-         write (iout,190)
-  190    format (/,' BAR  --  No Coordinate Frames Available',
+         write (iout,140)
+  140    format (/,' BAR  --  No Coordinate Frames Available',
      &              ' from Second Input File')
          call fatal
       end if
@@ -300,8 +290,8 @@ c
 c
 c     find potential energies for trajectory B in state A
 c
-      write (iout,200)
-  200 format (/,' Initial Processing for Trajectory B :',/)
+      write (iout,150)
+  150 format (/,' Initial Processing for Trajectory B :',/)
       j = 0
       k = start2 - 1
       do while (.not. abort)
@@ -309,28 +299,24 @@ c
          k = k + 1
          call cutoffs
          ub0(j) = energy ()
-         m = (n2+1) * (step2-1)
-         do i = 1, m
-            read (ixyz,*,err=210,end=210)
+         do i = 1, step2-1
+            call readxyz (ixyz)
          end do
-  210    continue
          call readxyz (ixyz)
          k = k + step2 - 1
          if (k .ge. stop2)  abort = .true.
          if (mod(j,100).eq.0 .or. abort) then
-            write (iout,220)  j
-  220       format (7x,'Completed',i8,' Coordinate Frames')
+            write (iout,160)  j
+  160       format (7x,'Completed',i8,' Coordinate Frames')
          end if
       end do
 c
 c     reset trajectory B and process the initial structure
 c
       rewind (unit=ixyz)
-      m = (n2+1) * (start2-1)
-      do i = 1, m
-         read (ixyz,*,err=230,end=230)
+      do i = 1, start2-1
+         call readxyz (ixyz)
       end do
-  230 continue
       call readxyz (ixyz)
       nkey = nkey2
       do i = 1, nkey
@@ -340,8 +326,8 @@ c
 c
 c     find potential energies for trajectory B in state B
 c
-      write (iout,240)
-  240 format (/,' Potential Energy Values for Trajectory B :',
+      write (iout,170)
+  170 format (/,' Potential Energy Values for Trajectory B :',
      &        //,7x,'Frame',9x,'State A',9x,'State B',12x,'Delta',/)
       j = 0
       k = start2 - 1
@@ -350,13 +336,11 @@ c
          k = k + 1
          call cutoffs
          ub1(j) = energy ()
-         write (iout,250)  k,ub0(j),ub1(j),ub0(j)-ub1(j)
-  250    format (i11,2x,3f16.4)
-         m = (n2+1) * (step2-1)
-         do i = 1, m
-            read (ixyz,*,err=260,end=260)
+         write (iout,180)  k,ub0(j),ub1(j),ub0(j)-ub1(j)
+  180    format (i11,2x,3f16.4)
+         do i = 1, step2-1
+            call readxyz (ixyz)
          end do
-  260    continue
          call readxyz (ixyz)
          k = k + step2 - 1
          if (k .ge. stop2)  abort = .true.
@@ -378,8 +362,8 @@ c
 c
 c     compute the free energy difference via Zwanzig equation
 c
-      write (iout,270)
-  270 format (/,' Estimation of Free Energy Difference',
+      write (iout,190)
+  190 format (/,' Estimation of Free Energy Difference',
      &           ' via FEP Method :',/)
       sum = 0.0d0
       do i = 1, nfrm1
@@ -391,15 +375,15 @@ c
          sum = sum + exp((ub1(i)-ub0(i))/rt)
       end do
       backward = -rt * log(sum/frm2)
-      write (iout,280)  forward
-  280 format (' FEP Forward Free Energy',4x,f12.4,' Kcal/mol')
-      write (iout,290)  backward
-  290 format (' FEP Backward Free Energy',3x,f12.4,' Kcal/mol')
+      write (iout,200)  forward
+  200 format (' FEP Forward Free Energy',4x,f12.4,' Kcal/mol')
+      write (iout,210)  backward
+  210 format (' FEP Backward Free Energy',3x,f12.4,' Kcal/mol')
 c
 c     compute the initial free energy via the BAR equation
 c
-      write (iout,300)
-  300 format (/,' Estimation of Free Energy Difference',
+      write (iout,220)
+  220 format (/,' Estimation of Free Energy Difference',
      &           ' via BAR Method :',/)
       maxiter = 100
       eps = 0.0001d0
@@ -424,12 +408,12 @@ c
       stdev = sqrt((bot2-bot*bot/frm1)/(bot*bot)
      &                + (top2-top*top/frm2)/(top*top))
       delta = abs(cnew-cold)
-      write (iout,310)  iter,cnew
-  310 format (' BAR Iteration',i4,10x,f12.4,' Kcal/mol')
+      write (iout,230)  iter,cnew
+  230 format (' BAR Iteration',i4,10x,f12.4,' Kcal/mol')
       if (delta .lt. eps) then
          done = .true.
-         write (iout,320)  cnew,stdev
-  320    format (' BAR Free Energy Estimate',3x,f12.4,
+         write (iout,240)  cnew,stdev
+  240    format (' BAR Free Energy Estimate',3x,f12.4,
      &              ' +/-',f8.4,' Kcal/mol')
       end if
 c
@@ -456,19 +440,20 @@ c
          stdev = sqrt((bot2-bot*bot/frm1)/(bot*bot)
      &                   + (top2-top*top/frm2)/(top*top))
          delta = abs(cnew-cold)
-         write (iout,330)  iter,cnew
-  330    format (' BAR Iteration',i4,10x,f12.4,' Kcal/mol')
+         write (iout,250)  iter,cnew
+  250    format (' BAR Iteration',i4,10x,f12.4,' Kcal/mol')
          if (delta .lt. eps) then
             done = .true.
-            write (iout,340)  cnew,stdev
-  340       format (/,' BAR Free Energy Estimate',3x,f12.4,
+            write (iout,260)  cnew,stdev
+  260       format (/,' BAR Free Energy Estimate',3x,f12.4,
      &                 ' +/-',f8.4,' Kcal/mol')
          end if
          if (iter.ge.maxiter .and. .not.done) then
             done = .true.
-            write (iout,350)  maxiter
-  350       format (/,' BAR Free Energy Estimate not Converged',
+            write (iout,270)  maxiter
+  270       format (/,' BAR Free Energy Estimate not Converged',
      &                 ' after',i4,' Iterations')
+            call fatal
          end if
       end do
 c
@@ -480,8 +465,8 @@ c
 c
 c     use bootstrapping analysis to estimate statistical error
 c
-      write (iout,360)
-  360 format (/,' Bootstrapping Error Analysis of BAR',
+      write (iout,280)
+  280 format (/,' Bootstrapping Error Analysis of BAR',
      &           ' Free Energy :',/)
       sum = 0.0d0
       sum2 = 0.0d0
@@ -523,8 +508,8 @@ c
                sum = sum + cnew
                sum2 = sum2 + cnew*cnew
                if (debug) then
-                  write (iout,370)  k,cnew,iter
-  370             format (' Bootstrap Estimate',i7,2x,f12.4,
+                  write (iout,290)  k,cnew,iter
+  290             format (' Bootstrap Estimate',i7,2x,f12.4,
      &                       ' Kcal/mol at',i4,' Resamples')
                end if
             end if
@@ -534,11 +519,11 @@ c
       ratio = dble(nbst/(nbst-1))
       stdev = sqrt(ratio*(sum2/dble(nbst)-mean*mean))
       if (verbose) then
-         write (iout,380)
-  380    format ()
+         write (iout,300)
+  300    format ()
       end if
-      write (iout,390)  mean,stdev
-  390 format (' BAR Bootstrap Free Energy',2x,f12.4,
+      write (iout,310)  mean,stdev
+  310 format (' BAR Bootstrap Free Energy',2x,f12.4,
      &           ' +/-',f8.4,' Kcal/mol')
 c
 c     perform deallocation of some local arrays

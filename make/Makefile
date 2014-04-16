@@ -18,17 +18,20 @@
 ##  and Jochen Buehler of the University of Konstanz, Jan. 1998,
 ##  Modifications by Reece Hart & Jay Ponder, Washington University
 ##
+##  Note: Building TINKER requires libraries for the FFTW Fast
+##  Fourier Transform package and (optionally) the APBS Poisson-
+##  Boltzmann solver. These libraries are assumed to already be
+##  present, and are not built by this Makefile.
+##
 ###################################################################
 
 ###################################################################
 ##  Master Directory Locations; Change as Needed for Local Site  ##
 ###################################################################
 
-##
 ##  TINKERDIR    TINKER Distribution Directory
 ##  BINDIR       Hard Copies of TINKER Executables
 ##  LINKDIR      Linked Copies of TINKER Executables
-##
 
 TINKERDIR = /Users/ponder/tinker
 BINDIR = $(TINKERDIR)/bin
@@ -39,26 +42,33 @@ LINKDIR = /usr/local/bin
 ##  May Need Editing to Match Your Desired OS & Compiler Version  ##
 ####################################################################
 
-##
-##  Machine:  Generic Linux
+##  Machine:  Generic Linux or Macintosh
 ##  CPU Type: Intel x86 Compatible
-##  Oper Sys: Fedora Core
 ##  Compiler: GNU gfortran
-##
+
+F77 = /usr/bin/gfortran
+LIBS =
+F77FLAGS = -c
+OPTFLAGS = -O3 -ffast-math
+LIBFLAGS = -crusv
+LINKFLAGS = $(OPTFLAGS) -static-libgcc
+
+##  Machine:  Generic Linux or Macintosh OS X
+##  CPU Type: Intel x86 Compatible
+##  Compiler: GNU gfortran
+##  Parallel: OpenMP
 
 #F77 = /usr/bin/gfortran
 #LIBS =
 #F77FLAGS = -c
-#OPTFLAGS = -O
+#OPTFLAGS = -O3 -ffast-math -fopenmp
 #LIBFLAGS = -crusv
-#LINKFLAGS =
+#LINKFLAGS = $(OPTFLAGS) -static-libgcc
 
-##
 ##  Machine:  Generic Linux
 ##  CPU Type: Intel x86 Compatible (also AMD)
 ##  Oper Sys: Fedora Core
 ##  Compiler: Intel Fortran for Linux 14.0
-##
 
 #F77 = /opt/intel/bin/ifort
 #LIBS =
@@ -67,56 +77,48 @@ LINKDIR = /usr/local/bin
 #LIBFLAGS = -crusv
 #LINKFLAGS = -static-intel
 
-##
 ##  Machine:  Generic Linux
 ##  CPU Type: Intel x86 Compatible (also AMD)
 ##  Oper Sys: Fedora Core
 ##  Compiler: Intel Fortran for Linux 14.0
 ##  Parallel: OpenMP
-##
 
 #F77 = /opt/intel/bin/ifort
 #LIBS = -L$(TINKERDIR)/fftw/lib -lfftw3_threads -lfftw3
-#F77FLAGS = -c -xHost -assume cc_omp
+#F77FLAGS = -c -xHost
 #OPTFLAGS = -O3 -no-ipo -no-prec-div -openmp
 #LIBFLAGS = -crusv
 #LINKFLAGS = $(OPTFLAGS) -static-intel
 
-##
 ##  Machine:  Macintosh
 ##  CPU Type: Intel Xeon
 ##  Oper Sys: OS X 10.9 (Mavericks)
 ##  Compiler: Intel Fortran for Mac 14.0
-##
 
 #F77 = /opt/intel/bin/ifort
 #LIBS =
-#F77FLAGS = -c -axSSSE3 -vec-report0
-#OPTFLAGS = -O3 -no-ipo -no-prec-div
+#F77FLAGS = -c -axSSSE3
+#OPTFLAGS = -O3 -no-ipo -no-prec-div -mdynamic-no-pic
 #LIBFLAGS = -crusv
 #LINKFLAGS = -static-intel -mmacosx-version-min=10.6
 
-##
 ##  Machine:  Macintosh
 ##  CPU Type: Intel Xeon
 ##  Oper Sys: OS X 10.9 (Mavericks)
 ##  Compiler: Intel Fortran for Mac 14.0
 ##  Parallel: OpenMP
-##
 
-F77 = /opt/intel/bin/ifort
-LIBS = -L$(TINKERDIR)/fftw/lib -lfftw3_threads -lfftw3
-F77FLAGS = -c -axSSSE3 -assume cc_omp
-OPTFLAGS = -O3 -no-ipo -no-prec-div -openmp
-LIBFLAGS = -crusv
-LINKFLAGS = $(OPTFLAGS) -static-intel -mmacosx-version-min=10.6
+#F77 = /opt/intel/bin/ifort
+#LIBS = -L$(TINKERDIR)/fftw/lib -lfftw3_threads -lfftw3
+#F77FLAGS = -c -axSSSE3
+#OPTFLAGS = -O3 -no-ipo -no-prec-div -mdynamic-no-pic -openmp
+#LIBFLAGS = -crusv
+#LINKFLAGS = $(OPTFLAGS) -static-intel -mmacosx-version-min=10.6
 
-##
 ##  Machine:  Macintosh
 ##  CPU Type: PowerPC G4/G5
 ##  Oper Sys: OS X 10.4 (Tiger)
 ##  Compiler: IBM XLF 8.1
-##
 
 #F77 = /opt/ibmcmp/xlf/8.1/bin/xlf
 #F77FLAGS = -c -qextname
@@ -124,12 +126,10 @@ LINKFLAGS = $(OPTFLAGS) -static-intel -mmacosx-version-min=10.6
 #LIBFLAGS = -r
 #LINKFLAGS =
 
-##
 ##  Machine:  HP Alpha
 ##  CPU Type: Alpha 21264
 ##  Oper Sys: HP Tru64 Unix
 ##  Compiler: HP Fortran
-##
 
 #F77 = /usr/bin/f77
 #LIBS =
@@ -138,12 +138,10 @@ LINKFLAGS = $(OPTFLAGS) -static-intel -mmacosx-version-min=10.6
 #LIBFLAGS = -rclvs
 #LINKFLAGS = -fast -non_shared -om -WL,-om_no_inst_sched
 
-##
 ##  Machine:  Silicon Graphics
 ##  CPU Type: MIPS R10000
 ##  Oper Sys: SGI Irix 6.5
 ##  Compiler: MIPSPro Fortran
-##
 
 #F77 = /bin/f77
 #LIBS =
@@ -152,12 +150,10 @@ LINKFLAGS = $(OPTFLAGS) -static-intel -mmacosx-version-min=10.6
 #LIBFLAGS = -rclvs
 #LINKFLAGS = -O -mips4
 
-##
 ##  Machine:  SUN Workstation
 ##  CPU Type: UltraSPARC
 ##  Oper Sys: Solaris 4.0
 ##  Compiler: SUN Fortran
-##
 
 #F77 = /bin/f77
 #LIBS =
@@ -1127,7 +1123,7 @@ beeman.o: atmtyp.i atoms.i freeze.i mdstuf.i moldyn.i sizes.i units.i usage.i
 bicubic.o:
 bitors.o: angle.i bitor.i couple.i iounit.i sizes.i
 bonds.o: atmlst.i atoms.i bond.i couple.i iounit.i sizes.i
-born.o: atmtyp.i atoms.i bath.i chgpot.i couple.i deriv.i inform.i iounit.i math.i pbstuf.i potent.i sizes.i solute.i virial.i
+born.o: atmtyp.i atoms.i bath.i chgpot.i couple.i deriv.i inform.i iounit.i math.i pbstuf.i sizes.i solute.i virial.i
 bounds.o: atmtyp.i atoms.i boxes.i molcul.i sizes.i
 bussi.o: atmtyp.i atoms.i bath.i boxes.i freeze.i mdstuf.i moldyn.i sizes.i units.i usage.i
 calendar.o:
@@ -1151,7 +1147,7 @@ deflate.o: iounit.i
 delete.o: atmtyp.i atoms.i couple.i inform.i iounit.i sizes.i
 diagq.o:
 diffeq.o: atoms.i iounit.i math.i sizes.i warp.i
-diffuse.o: atmtyp.i atoms.i boxes.i iounit.i molcul.i sizes.i usage.i
+diffuse.o: atmtyp.i atoms.i bound.i inform.i iounit.i molcul.i sizes.i usage.i
 distgeom.o: angle.i atmtyp.i atoms.i bond.i couple.i disgeo.i files.i inform.i iounit.i kgeoms.i kvdws.i math.i refer.i sizes.i tors.i
 document.o: iounit.i
 dynamic.o: atoms.i bath.i bond.i bound.i inform.i iounit.i keys.i mdstuf.i potent.i sizes.i solute.i stodyn.i usage.i
@@ -1238,10 +1234,10 @@ erxnfld.o: atoms.i chgpot.i energi.i mpole.i rxnfld.i rxnpot.i shunt.i sizes.i u
 erxnfld1.o: atoms.i deriv.i energi.i sizes.i
 erxnfld2.o:
 erxnfld3.o: action.i analyz.i atmtyp.i atoms.i chgpot.i energi.i inform.i iounit.i mpole.i shunt.i sizes.i usage.i
-esolv.o: atmtyp.i atoms.i bound.i charge.i chgpot.i couple.i deriv.i energi.i gkstuf.i group.i hpmf.i kvdws.i math.i mpole.i npolar.i pbstuf.i polar.i polgrp.i polpot.i potent.i shunt.i sizes.i solute.i usage.i vdw.i warp.i
-esolv1.o: atmtyp.i atoms.i bound.i boxes.i charge.i chgpot.i couple.i cutoff.i deriv.i energi.i gkstuf.i group.i hpmf.i inter.i iounit.i kvdws.i math.i molcul.i mplpot.i mpole.i npolar.i pbstuf.i polar.i polgrp.i polpot.i potent.i shunt.i sizes.i solute.i usage.i vdw.i virial.i warp.i
+esolv.o: atmtyp.i atoms.i bound.i charge.i chgpot.i couple.i cutoff.i deriv.i energi.i gkstuf.i group.i hpmf.i kvdws.i math.i mpole.i neigh.i npolar.i pbstuf.i polar.i polgrp.i polpot.i potent.i shunt.i sizes.i solute.i usage.i vdw.i warp.i
+esolv1.o: atmtyp.i atoms.i bound.i boxes.i charge.i chgpot.i couple.i cutoff.i deriv.i energi.i gkstuf.i group.i hpmf.i inter.i iounit.i kvdws.i math.i molcul.i mplpot.i mpole.i neigh.i npolar.i pbstuf.i polar.i polgrp.i polpot.i potent.i shunt.i sizes.i solute.i usage.i vdw.i virial.i warp.i
 esolv2.o: atoms.i charge.i chgpot.i hessn.i math.i potent.i shunt.i sizes.i solute.i warp.i
-esolv3.o: action.i analyz.i atmtyp.i atoms.i bound.i charge.i chgpot.i couple.i deriv.i energi.i gkstuf.i group.i hpmf.i inform.i inter.i iounit.i kvdws.i math.i molcul.i mpole.i npolar.i pbstuf.i polar.i polgrp.i polpot.i potent.i shunt.i sizes.i solute.i usage.i vdw.i warp.i
+esolv3.o: action.i analyz.i atmtyp.i atoms.i bound.i charge.i chgpot.i couple.i cutoff.i deriv.i energi.i gkstuf.i group.i hpmf.i inform.i inter.i iounit.i kvdws.i math.i molcul.i mpole.i neigh.i npolar.i pbstuf.i polar.i polgrp.i polpot.i potent.i shunt.i sizes.i solute.i usage.i vdw.i warp.i
 estrbnd.o: angle.i angpot.i atoms.i bond.i bound.i energi.i group.i math.i sizes.i strbnd.i usage.i
 estrbnd1.o: angle.i angpot.i atoms.i bond.i bound.i deriv.i energi.i group.i math.i sizes.i strbnd.i usage.i virial.i
 estrbnd2.o: angle.i angpot.i atoms.i bond.i bound.i group.i hessn.i math.i sizes.i strbnd.i
@@ -1361,7 +1357,7 @@ molxyz.o: files.i iounit.i titles.i
 moments.o: atmtyp.i atoms.i bound.i charge.i cutoff.i dipole.i moment.i mpole.i polar.i potent.i rigid.i sizes.i solute.i units.i usage.i
 monte.o: atoms.i files.i inform.i iounit.i omega.i output.i sizes.i units.i usage.i zcoord.i
 mutate.o: atmtyp.i atoms.i charge.i inform.i iounit.i katoms.i keys.i mpole.i mutant.i polar.i potent.i sizes.i
-nblist.o: atoms.i bound.i boxes.i cell.i charge.i cutoff.i iounit.i light.i mpole.i neigh.i potent.i sizes.i vdw.i
+nblist.o: atoms.i bound.i boxes.i cell.i charge.i cutoff.i iounit.i light.i mpole.i neigh.i openmp.i potent.i sizes.i vdw.i
 newton.o: atoms.i files.i inform.i iounit.i keys.i sizes.i usage.i
 newtrot.o: files.i hescut.i inform.i iounit.i keys.i math.i omega.i sizes.i zcoord.i
 nextarg.o: argue.i
@@ -1450,7 +1446,7 @@ sybylxyz.o: files.i iounit.i titles.i
 temper.o: atmtyp.i atoms.i bath.i group.i mdstuf.i molcul.i moldyn.i rgddyn.i sizes.i units.i usage.i
 testgrad.o: atoms.i deriv.i energi.i files.i inform.i inter.i iounit.i sizes.i solute.i usage.i
 testhess.o: atoms.i files.i hescut.i inform.i iounit.i sizes.i usage.i
-testpair.o: atoms.i cutoff.i deriv.i energi.i inform.i iounit.i light.i neigh.i potent.i sizes.i vdwpot.i
+testpair.o: atoms.i cutoff.i deriv.i energi.i inform.i iounit.i light.i neigh.i polpot.i potent.i sizes.i tarray.i vdwpot.i
 testpol.o: atoms.i bound.i cutoff.i inform.i iounit.i polar.i polpot.i potent.i rigid.i sizes.i units.i
 testrot.o: domega.i energi.i inform.i iounit.i math.i omega.i sizes.i zcoord.i
 timer.o: atoms.i cutoff.i hescut.i inform.i iounit.i sizes.i
@@ -1469,7 +1465,7 @@ vibbig.o: atmtyp.i atoms.i bound.i couple.i cutoff.i files.i hescut.i hessn.i in
 vibrate.o: atmtyp.i atoms.i files.i hescut.i iounit.i math.i sizes.i units.i usage.i
 vibrot.o: iounit.i omega.i sizes.i
 volume.o: atoms.i iounit.i math.i sizes.i
-xtalfit.o: atmtyp.i atoms.i bound.i boxes.i charge.i couple.i dipole.i files.i fracs.i iounit.i kvdws.i math.i molcul.i potent.i sizes.i vdw.i xtals.i
+xtalfit.o: atmtyp.i atoms.i bound.i boxes.i charge.i dipole.i files.i fracs.i iounit.i kvdws.i math.i molcul.i potent.i sizes.i vdw.i xtals.i
 xtalmin.o: atoms.i boxes.i files.i inform.i iounit.i keys.i math.i scales.i sizes.i
 xyzatm.o: atoms.i inform.i iounit.i math.i sizes.i
 xyzedit.o: atmtyp.i atoms.i bound.i boxes.i couple.i cutoff.i files.i iounit.i math.i molcul.i refer.i sizes.i titles.i units.i usage.i
