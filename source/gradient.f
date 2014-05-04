@@ -26,13 +26,31 @@ c
       include 'energi.i'
       include 'inter.i'
       include 'iounit.i'
+      include 'mutant.i'
+      include 'osrwi.i'
       include 'potent.i'
       include 'rigid.i'
       include 'vdwpot.i'
       include 'virial.i'
       integer i,j
-      real*8 energy,cutoff
+      real*8 energy,cutoff,DTenergy
       real*8 derivs(3,*)
+      
+c
+c     JRA Redirect potential calculation to osrw code during
+c       osrw simulations
+c      
+       if (osrwon) then
+        call osrw
+        energy = esum
+        do i = 1,n
+          do j = 1,3
+            derivs(j,i) = desum(j,i)
+          end do
+        end do
+        return
+      end if 
+      
 c
 c
 c     zero out each of the potential energy components
@@ -49,7 +67,6 @@ c
       et = 0.0d0
       ept = 0.0d0
       ebt = 0.0d0
-      eat = 0.0d0
       ett = 0.0d0
       ev = 0.0d0
       ec = 0.0d0
@@ -79,7 +96,6 @@ c
             det(j,i) = 0.0d0
             dept(j,i) = 0.0d0
             debt(j,i) = 0.0d0
-            deat(j,i) = 0.0d0
             dett(j,i) = 0.0d0
             dev(j,i) = 0.0d0
             dec(j,i) = 0.0d0
@@ -139,7 +155,6 @@ c
       if (use_tors)  call etors1
       if (use_pitors)  call epitors1
       if (use_strtor)  call estrtor1
-      if (use_angtor)  call eangtor1
       if (use_tortor)  call etortor1
 c
 c     call the van der Waals energy and gradient routines
@@ -166,12 +181,25 @@ c
       if (use_metal)  call emetal1
       if (use_geom)  call egeom1
       if (use_extra)  call extra1
+      
+c
+c     JRA vir is wrong but this prevents ruining the system
+c
+      if (osrwon) then
+      do i = 1, 3
+         do j = 1, 3
+            vir(j,i) = 0.0d0
+         end do
+      end do      
+      end if
+      
+      
 c
 c     sum up to get the total energy and first derivatives
 c
       esum = eb + ea + eba + eub + eaa + eopb + eopd + eid + eit
-     &          + et + ept + ebt + eat + ett + ev + ec + ecd + ed
-     &          + em + ep + er + es + elf + eg + ex
+     &          + et + ept + ebt + ett + ev + ec + ecd + ed + em
+     &          + ep + er + es + elf + eg + ex
       energy = esum
       do i = 1, n
          do j = 1, 3
@@ -179,21 +207,23 @@ c
      &                      + deub(j,i) + deaa(j,i) + deopb(j,i)
      &                      + deopd(j,i) + deid(j,i) + deit(j,i)
      &                      + det(j,i) + dept(j,i) + debt(j,i)
-     &                      + deat(j,i) + dett(j,i) + dev(j,i)
-     &                      + dec(j,i) + decd(j,i) + ded(j,i)
-     &                      + dem(j,i) + dep(j,i) + der(j,i)
-     &                      + des(j,i) + delf(j,i) + deg(j,i)
-     &                      + dex(j,i)
+     &                      + dett(j,i) + dev(j,i) + dec(j,i)
+     &                      + decd(j,i) + ded(j,i) + dem(j,i)
+     &                      + dep(j,i) + der(j,i) + des(j,i)
+     &                      + delf(j,i) + deg(j,i) + dex(j,i)
             derivs(j,i) = desum(j,i)
          end do
       end do
 c
 c     check for an illegal value for the total energy
 c
+
+
       if (isnan(esum)) then
          write (iout,10)
    10    format (/,' GRADIENT  --  Illegal Value for the Total',
      &              ' Potential Energy')
+         call prterr
          call fatal
       end if
       return

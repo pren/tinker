@@ -21,6 +21,7 @@ c
       implicit none
       include 'sizes.i'
       include 'atoms.i'
+      include 'cutoff.i'
       include 'deriv.i'
       include 'energi.i'
       include 'inform.i'
@@ -50,7 +51,6 @@ c
       logical header,match
       logical repeat
       character*1 axis(3)
-      character*6 mode
       character*120 string
       data axis  / 'X','Y','Z' /
 c
@@ -108,8 +108,10 @@ c
 c
 c     get the timing for setup of double nested loop
 c
-      mode = 'LOOP'
-      call setpair (mode)
+      use_lights = .false.
+      use_vlist = .false.
+      use_clist = .false.
+      use_mlist = .false.
       call settime
       do m = 1, nterm
          do i = 1, n-1
@@ -137,8 +139,10 @@ c
 c
 c     get the timing for setup of method of lights
 c
-      mode = 'LIGHTS'
-      call setpair (mode)
+      use_lights = .true.
+      use_vlist = .false.
+      use_clist = .false.
+      use_mlist = .false.
       call settime
       do m = 1, nterm
          do i = 1, n
@@ -198,14 +202,15 @@ c
 c
 c     get the timing for setup of pair neighbor list
 c
-      mode = 'LIST'
-      call setpair (mode)
+      use_lights = .false.
+      use_vlist = .true.
+      use_clist = .true.
+      use_mlist = .true.
       call settime
       do m = 1, ncalls
          dovlst = .true.
          doclst = .true.
          domlst = .true.
-         doulst = .true.
          call nblist
       end do
       call gettime (wall,cpu)
@@ -214,8 +219,10 @@ c
 c
 c     get the timing for energy terms via double nested loop
 c
-      mode = 'LOOP'
-      call setpair (mode)
+      use_lights = .false.
+      use_vlist = .false.
+      use_clist = .false.
+      use_mlist = .false.
       call settime
       do k = 1, ncalls
          if (use_vdw) then
@@ -246,8 +253,10 @@ c
 c
 c     get the timing for energy terms via method of lights
 c
-      mode = 'LIGHTS'
-      call setpair (mode)
+      use_lights = .true.
+      use_vlist = .false.
+      use_clist = .false.
+      use_mlist = .false.
       call settime
       do k = 1, ncalls
          if (use_vdw) then
@@ -275,8 +284,11 @@ c
 c
 c     get the timing for energy terms via pair neighbor list
 c
-      mode = 'LIST'
-      call setpair (mode)
+      use_lights = .false.
+      use_vlist = .true.
+      use_clist = .true.
+      use_mlist = .true.
+      call nblist
       call settime
       do k = 1, ncalls
          if (use_vdw) then
@@ -315,8 +327,10 @@ c
 c
 c     get the timing for gradient via double nested loop
 c
-      mode = 'LOOP'
-      call setpair (mode)
+      use_lights = .false.
+      use_vlist = .false.
+      use_clist = .false.
+      use_mlist = .false.
       call settime
       do k = 1, ncalls
          if (use_vdw) then
@@ -360,8 +374,10 @@ c
 c
 c     get the timing for gradient via method of lights
 c
-      mode = 'LIGHTS'
-      call setpair (mode)
+      use_lights = .true.
+      use_vlist = .false.
+      use_clist = .false.
+      use_mlist = .false.
       call settime
       do k = 1, ncalls
          if (use_vdw) then
@@ -402,8 +418,10 @@ c
 c
 c     get the timing for gradient via pair neighbor list
 c
-      mode = 'LIST'
-      call setpair (mode)
+      use_lights = .false.
+      use_vlist = .true.
+      use_clist = .true.
+      use_mlist = .true.
       call settime
       do k = 1, ncalls
          if (use_vdw) then
@@ -493,122 +511,4 @@ c
 c     perform any final tasks before program exit
 c
       call final
-      end
-c
-c
-c     ################################################################
-c     ##                                                            ##
-c     ##  program setpair  --  list setup and cutoffs for testpair  ##
-c     ##                                                            ##
-c     ################################################################
-c
-c
-c     "setpair" is a service routine that assigns flags, sets cutoffs
-c     and allocates arrays used by different pairwise neighbor methods
-c
-c
-      subroutine setpair (mode)
-      implicit none
-      include 'sizes.i'
-      include 'atoms.i'
-      include 'cutoff.i'
-      include 'neigh.i'
-      include 'polpot.i'
-      include 'tarray.i'
-      character*6 mode
-c
-c
-c     set control flags to handle use of neighbor lists
-c
-      if (mode .eq. 'LIST') then
-         use_list = .true.
-         use_vlist = .true.
-         use_clist = .true.
-         use_mlist = .true.
-         use_ulist = .true.
-         dovlst = .true.
-         doclst = .true.
-         domlst = .true.
-         doulst = .true.
-      else
-         use_list = .false.
-         use_vlist = .false.
-         use_clist = .false.
-         use_mlist = .false.
-         use_ulist = .false.
-         dovlst = .false.
-         doclst = .false.
-         domlst = .false.
-         doulst = .false.
-      end if
-c
-c     fix the dipole preconditioner cutoff at 4.5 Angstroms
-c
-      if (mode .eq. 'LOOP') then
-         use_lights = .false.
-         usolvcut = 4.5
-      else if (mode .eq. 'LIGHTS') then
-         use_lights = .true.
-         usolvcut = 4.5
-      else if (mode .eq. 'LIST') then
-         use_lights = .false.
-         usolvcut = 4.5 - pbuffer
-         ubuf2 = (usolvcut+pbuffer)**2
-         ubufx = (usolvcut+2.0d0*pbuffer)**2
-      end if
-c
-c     remove any previously allocated neighbor list arrays
-c
-      if (associated(nvlst))  deallocate (nvlst)
-      if (associated(vlst))  deallocate (vlst)
-      if (associated(xvold))  deallocate (xvold)
-      if (associated(yvold))  deallocate (yvold)
-      if (associated(zvold))  deallocate (zvold)
-      if (associated(nelst))  deallocate (nelst)
-      if (associated(elst))  deallocate (elst)
-      if (associated(xcold))  deallocate (xcold)
-      if (associated(ycold))  deallocate (ycold)
-      if (associated(zcold))  deallocate (zcold)
-      if (associated(xmold))  deallocate (xmold)
-      if (associated(ymold))  deallocate (ymold)
-      if (associated(zmold))  deallocate (zmold)
-      if (associated(tindex))  deallocate (tindex)
-      if (associated(tdipdip))  deallocate (tdipdip)
-      if (associated(nulst))  deallocate (nulst)
-      if (associated(ulst))  deallocate (ulst)
-      if (associated(xuold))  deallocate (xuold)
-      if (associated(yuold))  deallocate (yuold)
-      if (associated(zuold))  deallocate (zuold)
-c
-c     allocate the arrays needed by the pair neighbor lists
-c
-      if (mode .eq. 'LIST') then
-         allocate (nvlst(n))
-         allocate (vlst(maxvlst,n))
-         allocate (xvold(n))
-         allocate (yvold(n))
-         allocate (zvold(n))
-         allocate (nelst(n))
-         allocate (elst(maxelst,n))
-         allocate (xcold(n))
-         allocate (ycold(n))
-         allocate (zcold(n))
-         allocate (xmold(n))
-         allocate (ymold(n))
-         allocate (zmold(n))
-         if (poltyp .eq. 'MUTUAL') then
-            allocate (tindex(2,n*maxelst))
-            allocate (tdipdip(6,n*maxelst))
-         end if
-         allocate (nulst(n))
-         allocate (ulst(maxulst,n))
-         allocate (xuold(n))
-         allocate (yuold(n))
-         allocate (zuold(n))
-      end if
-c
-c     generate the pair neighbor lists if they are in use
-c
-      if (mode .eq. 'LIST')  call nblist
-      return
       end

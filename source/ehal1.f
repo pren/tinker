@@ -971,7 +971,7 @@ c
       include 'vdw.i'
       include 'vdwpot.i'
       include 'virial.i'
-      integer i,j,k
+      integer i,j,k,indexmut
       integer ii,iv,it
       integer kk,kv,kt
       integer, allocatable :: iv14(:)
@@ -991,6 +991,20 @@ c
       real*8 rik,rik2,rik3
       real*8 rik4,rik5
       real*8 rik6,rik7
+c     JRA additional variables
+      real*8 vlamij, dedlsignv
+      real*8 g1,g2,g3
+      real*8 t11,t12,t13,t21,t22,t23
+      real*8 dedxdl
+      real*8 drhodr
+      real*8 l_n,dl_ndl,dscaldl,dt1dl
+      real*8 dleftdl, dt2dl, dedl_temp
+      real*8 d2l_ndl2, d2scaldl2, d2t1dl2
+      real*8 d2leftdl2, d2t2dl2, d2edl2_temp
+      real*8 d2t1dldrho, d2leftdldrho, d2t2dldrho
+      real*8 dedldrho, dedldr
+      real*8 dedldx, dedldy, dedldz
+      real*8 dedlvt, d2edl2vt
       real*8 vxx,vyy,vzz
       real*8 vyx,vzx,vzy
       real*8 evt,eintert
@@ -1000,8 +1014,10 @@ c
       real*8, allocatable :: zred(:)
       real*8, allocatable :: vscale(:)
       real*8, allocatable :: devt(:,:)
+      real*8, allocatable :: d2edlvt(:,:)
       logical proceed,usei
-      logical muti,mutk
+      logical muti,mutk,soft
+      logical ifrom1,kfrom1,ifrom2,kfrom2
       character*6 mode
 c
 c
@@ -1013,8 +1029,21 @@ c
          dev(2,i) = 0.0d0
          dev(3,i) = 0.0d0
       end do
+      
+c
+c     zero out vdw lambda derivatives JRA
+c
+      dedlv = 0.0d0
+      d2edl2v = 0.0d0
+      do i = 1, n
+         d2edlv(1,i) = 0.0d0
+         d2edlv(2,i) = 0.0d0
+         d2edlv(3,i) = 0.0d0
+      end do      
+      
 c
 c     perform dynamic allocation of some local arrays
+c         JRA additional array
 c
       allocate (iv14(n))
       allocate (xred(n))
@@ -1022,6 +1051,7 @@ c
       allocate (zred(n))
       allocate (vscale(n))
       allocate (devt(3,n))
+      allocate (d2edlvt(3,n))
 c
 c     set arrays needed to scale connected atom interactions
 c
@@ -1060,16 +1090,27 @@ c
          virt(2,i) = vir(2,i)
          virt(3,i) = vir(3,i)
       end do 
+      dedlvt = dedlv
+      d2edl2vt = d2edl2v
+      do i = 1, n
+         d2edlvt(1,i) = d2edlv(1,i)
+         d2edlvt(2,i) = d2edlv(2,i)
+         d2edlvt(3,i) = d2edlv(3,i)
+      end do
 c
 c     set OpenMP directives for the major loop structure
+c         JRA added additional variables
 c
 !$OMP PARALLEL default(private) shared(nvdw,ivdw,ired,kred,
 !$OMP& jvdw,xred,yred,zred,use,nvlst,vlst,n12,n13,n14,n15,
 !$OMP& i12,i13,i14,i15,v2scale,v3scale,v4scale,v5scale,
 !$OMP& use_group,off2,radmin,epsilon,radmin4,epsilon4,ghal,dhal,
-!$OMP& cut2,vlambda,scalpha,scexp,mut,c0,c1,c2,c3,c4,c5,molcule)
-!$OMP& firstprivate(vscale,iv14) shared(evt,devt,virt,eintert)
-!$OMP DO reduction(+:evt,devt,virt,eintert) schedule(guided)
+!$OMP& osrwon,isrelative,vlambda,nmut1,nmut2,
+!$OMP& cut2,scalphav,scexpv,mut,c0,c1,c2,c3,c4,c5,molcule)
+!$OMP& firstprivate(vscale,iv14) shared(evt,devt,virt,eintert,
+!$OMP& dedlvt,d2edl2vt,d2edlvt)
+!$OMP DO reduction(+:evt,devt,virt,eintert,
+!$OMP& dedlvt,d2edl2vt,d2edlvt) schedule(guided)
 c
 c     find van der Waals energy and derivatives via neighbor list
 c
@@ -1110,6 +1151,25 @@ c
             proceed = .true.
             if (use_group)  call groups (proceed,fgrp,i,k,0,0,0,0)
             if (proceed)  proceed = (usei .or. use(k) .or. use(kv))
+            
+c         JRA - Ligand 1 and ligand 2 do not interact with each other
+c         ifrom1 is referring to i, kfrom1 referring to k
+            ifrom1 = .false.
+            kfrom1 = .false.
+            ifrom2 = .false.
+            kfrom2 = .false.
+            if (osrwon .and .isrelative) then
+c          JRA - assumes mut atoms are on top and in order (1 then 2)
+              ifrom1 = i .gt. 0 .and. i .le. nmut1
+              kfrom1 = k .gt. 0 .and. k .le. nmut1
+              ifrom2 = i .gt. nmut1+1 .and. i .le. nmut1+nmut2
+              kfrom2 = k .gt. nmut1+1 .and. k .le. nmut1+nmut2
+              if ((ifrom1 .and. kfrom2) .or.
+     &            (ifrom2 .and. kfrom1)) then
+                proceed = .false.
+              end if
+            end if            
+            
 c
 c     compute the energy contribution for this interaction
 c
@@ -1134,22 +1194,40 @@ c
                   eps = eps * vscale(k)
 c
 c     get the energy and gradient, via soft core if necessary
+c           JRA altered gradient calculation slightly
 c
-                  if ((muti .and. .not.mutk) .or.
-     &                (mutk .and. .not.muti)) then
+                  l_n = 1.0d0
+                  soft = (muti .and. .not.mutk) .or.
+     &                (mutk .and. .not.muti)
+c         JRA - If mutating entity is from system 1, use (1-lambda)
+                  vlamij = 1.0d0
+                  dedlsignv = 1.0d0
+                  if (osrwon .and. soft) then
+                    vlamij = vlambda
+                    if (isrelative .and. (ifrom1 .or. kfrom1)) then
+                       vlamij = 1.0d0 - vlambda
+                       dedlsignv = -1.0d0                     
+                    end if
+                  end if
+                  if (soft) then
                      rho = rik / rv
                      rho6 = rho**6
                      rho7 = rho6 * rho
-                     eps = eps * vlambda**scexp
-                     scal = scalpha * (1.0d0-vlambda)**2
+                     
+                     l_n = vlamij**scexpv
+c                     eps = eps * vlambda**scexpv
+                     scal = scalphav * (1.0d0-vlamij)**2
                      s1 = 1.0d0 / (scal+(rho+dhal)**7)
                      s2 = 1.0d0 / (scal+rho7+ghal)
                      t1 = (1.0d0+dhal)**7 * s1
                      t2 = (1.0d0+ghal) * s2
                      dt1drho = -7.0d0*(rho+dhal)**6 * t1 * s1
                      dt2drho = -7.0d0*rho6 * t2 * s2
-                     e = eps * t1 * (t2-2.0d0)
-                     de = eps * (dt1drho*(t2-2.0d0)+t1*dt2drho) / rv
+c                     e = eps * t1 * (t2-2.0d0)
+c                     de = eps * (dt1drho*(t2-2.0d0)+t1*dt2drho) / rv
+                     drhodr = 1.0d0/rv
+                     e = eps*l_n*t1*(t2-2.0d0)
+                     de = eps*l_n*(dt1drho*(t2-2.0d0)+t1*dt2drho)*drhodr
                   else
                      rv7 = rv**7
                      rik6 = rik2**3
@@ -1164,7 +1242,10 @@ c
                   end if
 c
 c     use energy switching if near the cutoff distance
+c          JRA change to keep taper and dtaper
 c
+                  taper = 1.0d0
+                  dtaper = 0.0d0
                   if (rik2 .gt. cut2) then
                      rik3 = rik2 * rik
                      rik4 = rik2 * rik2
@@ -1173,9 +1254,11 @@ c
      &                          + c2*rik2 + c1*rik + c0
                      dtaper = 5.0d0*c5*rik4 + 4.0d0*c4*rik3
      &                           + 3.0d0*c3*rik2 + 2.0d0*c2*rik + c1
-                     de = e*dtaper + de*taper
-                     e = e * taper
+c                     de = e*dtaper + de*taper
+c                     e = e * taper
                   end if
+                  de = e*dtaper + de*taper
+                  e = e * taper
 c
 c     scale the interaction based on its group membership
 c
@@ -1183,6 +1266,101 @@ c
                      e = e * fgrp
                      de = de * fgrp
                   end if
+                  
+c
+c     JRA calculate derivatives wrt lambda
+c        
+                  if (soft) then
+                     dl_ndl = 1.0d0*dedlsignv
+                     if (scexpv .gt. 1.5d0) then
+                       dl_ndl = dedlsignv*scexpv*vlamij**(scexpv-1.0d0)
+                     end if
+                     dscaldl = -dedlsignv*2.0d0*scalphav*(1-vlamij)
+                     dt1dl = -dscaldl*t1*s1
+                     dleftdl = l_n*dt1dl + dl_ndl*t1
+                     dt2dl = -dscaldl*t2*s2
+                     g1 = dl_ndl * t1 * (t2 - 2.0d0)
+                     g2 = l_n * dt1dl * (t2 - 2.0d0)
+                     g3 = l_n * t1 * dt2dl
+                     dedlvt = dedlvt + eps * (g1+g2+g3) * taper
+c                     dedl_temp = l_n*t1*dt2dl + dleftdl*(t2-2.0d0)
+                     dedl_temp = g1+g2+g3
+                     if (use_group) then
+                        dedl_temp = dedl_temp * fgrp
+                     end if
+c                     dedlvt = dedlvt + eps*dedl_temp*taper
+                     
+                     if (scexpv-2.0d0 .lt. 0.0d0) then
+                        d2l_ndl2 = 0.0d0
+                     else
+                        d2l_ndl2 = scexpv*(scexpv-1.0d0)
+     &                                  *vlamij**(scexpv-2.0d0)
+                     end if 
+                     d2scaldl2 = 2.0d0*scalphav
+                     d2t1dl2 = -s1*(2.0d0*dt1dl*dscaldl + t1*d2scaldl2)
+                     d2leftdl2 = l_n*d2t1dl2 + dl_ndl*dt1dl
+     &                          + dl_ndl*dt1dl + d2l_ndl2*t1
+                     d2t2dl2 = -s2*(2.0d0*dt2dl*dscaldl + t2*d2scaldl2)
+                     d2edl2_temp = l_n*t1*d2t2dl2 + dleftdl*dt2dl
+     &                         + dleftdl*dt2dl + d2leftdl2*(t2-2.0d0)
+                     if (use_group) then
+                        d2edl2_temp = d2edl2_temp * fgrp
+                     end if
+                     d2edl2vt = d2edl2vt + eps*d2edl2_temp*taper
+                     
+c                     d2t1dldrho = -14.0d0*dt1dl*s1*(rho+dhal)**6
+c                     d2leftdldrho = l_n*d2t1dldrho + dl_ndl*dt1drho
+c                     d2t2dldrho = -14.0d0*dt2dl*s2*rho6
+c                     dedldrho = l_n*(t1*d2t2dldrho + dt1drho*dt2dl)
+c     &                   + d2leftdldrho*(t2-2.0d0) + dleftdl*dt2drho
+c                     dedldr = eps * dedldrho * drhodr
+                     t11  = -dl_ndl*(t2-2.0d0)*(-dt1drho)*drhodr
+                     t12 = -l_n * dt2dl * (-dt1drho)*drhodr
+                     t13 = 2.0 * l_n * (t2-2.0d0) * (-dt1drho)*drhodr
+     &                                         * dscaldl * s1
+                     t21 = -dl_ndl * t1 * (-dt2drho)*drhodr
+                     t22 = -l_n * dt1dl * (-dt2drho)*drhodr
+                     t23 = 2.0 * l_n * t1 * (-dt2drho)*drhodr 
+     &                                         * dscaldl * s2
+                     dedldr = eps * (t11+t12+t13+t21+t22+t23)
+                     if (use_group) then
+                        dedldr = dedldr * fgrp
+                     end if
+                     dedldr = eps*dedl_temp*dtaper + dedldr*taper
+                     
+                     dedldx = dedldr*xr/rik
+                     dedldy = dedldr*yr/rik
+                     dedldz = dedldr*zr/rik
+                     
+                     if (i .eq. iv) then
+                        d2edlvt(1,i) = d2edlvt(1,i) + dedldx
+                        d2edlvt(2,i) = d2edlvt(2,i) + dedldy
+                        d2edlvt(3,i) = d2edlvt(3,i) + dedldz
+                     else
+                        d2edlvt(1,i) = d2edlvt(1,i) + dedldx*redi
+                        d2edlvt(2,i) = d2edlvt(2,i) + dedldy*redi
+                        d2edlvt(3,i) = d2edlvt(3,i) + dedldz*redi
+                        d2edlvt(1,iv) = d2edlvt(1,iv) + dedldx*rediv
+                        d2edlvt(2,iv) = d2edlvt(2,iv) + dedldy*rediv
+                        d2edlvt(3,iv) = d2edlvt(3,iv) + dedldz*rediv
+                     end if
+                     if (k .eq. kv) then
+                        d2edlvt(1,k) = d2edlvt(1,k) - dedldx
+                        d2edlvt(2,k) = d2edlvt(2,k) - dedldy
+                        d2edlvt(3,k) = d2edlvt(3,k) - dedldz
+                     else
+                        redk = kred(k)
+                        redkv = 1.0d0 - redk
+                        d2edlvt(1,k) = d2edlvt(1,k) - dedldx*redk
+                        d2edlvt(2,k) = d2edlvt(2,k) - dedldy*redk
+                        d2edlvt(3,k) = d2edlvt(3,k) - dedldz*redk
+                        d2edlvt(1,kv) = d2edlvt(1,kv) - dedldx*redkv
+                        d2edlvt(2,kv) = d2edlvt(2,kv) - dedldy*redkv
+                        d2edlvt(3,kv) = d2edlvt(3,kv) - dedldz*redkv
+                     end if
+                     
+                  end if     
+
 c
 c     find the chain rule terms for derivative components
 c
@@ -1284,7 +1462,18 @@ c
          vir(3,i) = virt(3,i)
       end do
 c
+c   JRA transfer for lambda derivatives
+c
+      dedlv = dedlvt
+      d2edl2v = d2edl2vt
+      do i = 1, n
+         d2edlv(1,i) = d2edlvt(1,i)
+         d2edlv(2,i) = d2edlvt(2,i)
+         d2edlv(3,i) = d2edlvt(3,i)
+      end do
+c
 c     perform deallocation of some local arrays
+c        JRA additional array
 c
       deallocate (iv14)
       deallocate (xred)
@@ -1292,5 +1481,6 @@ c
       deallocate (zred)
       deallocate (vscale)
       deallocate (devt)
+      deallocate (d2edlvt)
       return
       end

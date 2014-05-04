@@ -162,8 +162,7 @@ c
       temp = 2.0d0 * eksum / (dble(nfree) * gasconst)
       etot = epot + eksum
       call mdstat (istep,dt,etot,epot,eksum,temp,pres)
-      call mdsave (istep,dt,epot,eksum)
-      call mdrest (istep)
+      call mdsave (istep,dt,epot)
       return
       end
 c

@@ -27,7 +27,9 @@ c
       include 'keys.i'
       include 'neigh.i'
       include 'polpot.i'
+ccccXiao
       include 'tarray.i'
+cccc
       integer i,next
       real*8 big,value
       logical truncate
@@ -175,7 +177,7 @@ c
 c     preconditioner list only needed for mutual polarization
 c
       if (poltyp .ne. 'MUTUAL')  use_ulist = .false.
-      if (use_list)  usolvcut = usolvcut - pbuffer
+      if (use_ulist)  usolvcut = usolvcut - pbuffer
 c
 c     apply any Ewald cutoff to charge and multipole terms
 c
@@ -202,16 +204,18 @@ c
 c
 c     set buffer region limits for pairwise neighbor lists
 c
-      lbuf2 = (0.5d0*lbuffer)**2
-      pbuf2 = (0.5d0*pbuffer)**2
-      vbuf2 = (vdwcut+lbuffer)**2
-      cbuf2 = (chgcut+lbuffer)**2
-      mbuf2 = (mpolecut+lbuffer)**2
-      ubuf2 = (usolvcut+pbuffer)**2
-      vbufx = (vdwcut+2.0d0*lbuffer)**2
-      cbufx = (chgcut+2.0d0*lbuffer)**2
-      mbufx = (mpolecut+2.0d0*lbuffer)**2
-      ubufx = (usolvcut+2.0d0*pbuffer)**2
+      if (use_list) then
+         lbuf2 = (0.5d0*lbuffer)**2
+         pbuf2 = (0.5d0*pbuffer)**2
+         vbuf2 = (vdwcut+lbuffer)**2
+         cbuf2 = (chgcut+lbuffer)**2
+         mbuf2 = (mpolecut+lbuffer)**2
+         ubuf2 = (usolvcut+pbuffer)**2
+         vbufx = (vdwcut+2.0d0*lbuffer)**2
+         cbufx = (chgcut+2.0d0*lbuffer)**2
+         mbufx = (mpolecut+2.0d0*lbuffer)**2
+         ubufx = (usolvcut+2.0d0*pbuffer)**2
+      end if
 c
 c     perform dynamic allocation of some pointer arrays
 c
@@ -232,6 +236,11 @@ c
          if (associated(elst))  deallocate (elst)
          allocate (nelst(n))
          allocate (elst(maxelst,n))
+ccccXiao:
+         if (associated(ta_dipdip))  deallocate (ta_dipdip)
+         if (associated(ta_dip_index))  deallocate (ta_dip_index)
+         allocate (ta_dipdip(6,n*maxelst))
+         allocate (ta_dip_index(2,n*maxelst))
       end if
       if (use_clist) then
          if (associated(xcold))  deallocate (xcold)
@@ -248,12 +257,6 @@ c
          allocate (xmold(n))
          allocate (ymold(n))
          allocate (zmold(n))
-         if (poltyp .eq. 'MUTUAL') then
-            if (associated(tindex))  deallocate (tindex)
-            if (associated(tdipdip))  deallocate (tdipdip)
-            allocate (tindex(2,n*maxelst))
-            allocate (tdipdip(6,n*maxelst))
-         end if
       end if
       if (use_ulist) then
          if (associated(nulst))  deallocate (nulst)

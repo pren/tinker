@@ -62,6 +62,9 @@ c
                solvtyp = 'ASP'
             else if (value(1:4) .eq. 'SASA') then
                solvtyp = 'SASA'
+            else if (value(1:4) .eq. 'GBSA') then
+               use_born = .true.
+               solvtyp = 'STILL'
             else if (value(1:5) .eq. 'ONION') then
                use_born = .true.
                solvtyp = 'ONION'
@@ -80,9 +83,6 @@ c
             else if (value(1:7) .eq. 'GB-HPMF') then
                use_born = .true.
                solvtyp = 'GB-HPMF'
-            else if (value(1:2) .eq. 'GB') then
-               use_born = .true.
-               solvtyp = 'STILL'
             else if (value(1:7) .eq. 'GK-HPMF') then
                use_born = .true.
                solvtyp = 'GK-HPMF'

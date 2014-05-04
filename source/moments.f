@@ -22,15 +22,12 @@ c
       include 'sizes.i'
       include 'atmtyp.i'
       include 'atoms.i'
-      include 'bound.i'
       include 'charge.i'
-      include 'cutoff.i'
       include 'dipole.i'
       include 'moment.i'
       include 'mpole.i'
       include 'polar.i'
       include 'potent.i'
-      include 'rigid.i'
       include 'solute.i'
       include 'units.i'
       include 'usage.i'
@@ -65,11 +62,6 @@ c
       zxqdp = 0.0d0
       zyqdp = 0.0d0
       zzqdp = 0.0d0
-c
-c     maintain periodic boundaries and neighbor lists
-c
-      if (use_bounds .and. .not.use_rigid)  call bounds
-      if (use_clist .or. use_mlist)  call nblist
 c
 c     perform dynamic allocation of some local arrays
 c
@@ -156,9 +148,9 @@ c
 c
 c     find atomic multipoles and induced dipoles in global frame
 c
-      if (use_born)  call born
       call chkpole
       call rotpole
+      if (use_born)  call born
       call induce
       if (solvtyp.eq.'GK' .or. solvtyp.eq.'PB') then
          do i = 1, npole

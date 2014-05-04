@@ -25,6 +25,7 @@ c
       include 'mpole.i'
       include 'potent.i'
       integer i,j,ii
+      
 c
 c
 c     choose the method for summing over multipole interactions
@@ -63,6 +64,7 @@ c
             end do
          end do
       end if
+      
       return
       end
 c
@@ -96,6 +98,7 @@ c
       include 'molcul.i'
       include 'mplpot.i'
       include 'mpole.i'
+      include 'mutant.i'
       include 'polar.i'
       include 'polgrp.i'
       include 'polpot.i'
@@ -164,7 +167,7 @@ c
       real*8, allocatable :: pscale(:)
       real*8, allocatable :: dscale(:)
       real*8, allocatable :: uscale(:)
-      logical proceed,usei,usek
+      logical proceed,usei,usek,muti,mutk
       character*6 mode
 c
 c
@@ -178,7 +181,6 @@ c
             dep(j,i) = 0.0d0
          end do
       end do
-      if (npole .eq. 0)  return
 c
 c     check the sign of multipole components at chiral sites
 c
@@ -201,6 +203,7 @@ c
 c
 c     set arrays needed to scale connected atom interactions
 c
+      if (npole .eq. 0)  return
       do i = 1, n
          mscale(i) = 1.0d0
          pscale(i) = 1.0d0
@@ -237,6 +240,8 @@ c
          qi(8) = rpole(12,i)
          qi(9) = rpole(13,i)
          usei = (use(ii) .or. use(iz) .or. use(ix) .or. use(iy))
+c        JRA change
+         muti = mut(ii)
 c
 c     set interaction scaling coefficients for connected atoms
 c
@@ -281,11 +286,18 @@ c
             kz = zaxis(k)
             kx = xaxis(k)
             ky = yaxis(k)
+c           JRA change
             usek = (use(kk) .or. use(kz) .or. use(kx) .or. use(ky))
+            mutk = mut(kk)
             proceed = .true.
             if (use_group)  call groups (proceed,fgrp,ii,kk,0,0,0,0)
             if (.not. use_intra)  proceed = .true.
-            if (proceed)  proceed = (usei .or. usek)
+            if (proceed) then
+             proceed = (use(ii) .or. use(iz) .or. use(ix) .or. use(iy))
+     &            .or. (use(kk) .or. use(kz) .or. use(kx) .or. use(ky))
+            end if
+c           JRA change
+            if (osrwon) proceed = muti .and. mutk
             if (.not. proceed)  goto 10
             xr = x(kk) - x(ii)
             yr = y(kk) - y(ii)
@@ -1673,7 +1685,6 @@ c
       real*8 rr5,rr7,rr9,rr11
       real*8 vxx,vyy,vzz
       real*8 vyx,vzx,vzy
-      real*8 emtt,eptt,eintert
       real*8 ci,di(3),qi(9)
       real*8 ck,dk(3),qk(9)
       real*8 frcxi(3),frcxk(3)
@@ -1706,15 +1717,10 @@ c
       real*8 gl(0:8),gli(7),glip(7)
       real*8 sc(10),sci(8),scip(8)
       real*8 gf(7),gfi(6),gti(6)
-      real*8 virt(3,3)
       real*8, allocatable :: mscale(:)
       real*8, allocatable :: pscale(:)
       real*8, allocatable :: dscale(:)
       real*8, allocatable :: uscale(:)
-      real*8, allocatable :: demt1(:,:)
-      real*8, allocatable :: demt2(:,:)
-      real*8, allocatable :: dept1(:,:)
-      real*8, allocatable :: dept2(:,:)
       logical proceed,usei,usek
       character*6 mode
 c
@@ -1729,7 +1735,6 @@ c
             dep(j,i) = 0.0d0
          end do
       end do
-      if (npole .eq. 0)  return
 c
 c     check the sign of multipole components at chiral sites
 c
@@ -1749,10 +1754,6 @@ c
       allocate (pscale(n))
       allocate (dscale(n))
       allocate (uscale(n))
-      allocate (demt1(3,n))
-      allocate (demt2(3,n))
-      allocate (dept1(3,n))
-      allocate (dept2(3,n))
 c
 c     set arrays needed to scale connected atom interactions
 c
@@ -1769,44 +1770,6 @@ c
       f = electric / dielec
       mode = 'MPOLE'
       call switch (mode)
-c
-c     initialize local variables for OpenMP calculation
-c
-      emtt = 0.0d0
-      eptt = 0.0d0
-      eintert = einter
-      do i = 1, n
-         do j = 1, 3
-            demt1(j,i) = 0.0d0
-            demt2(j,i) = 0.0d0
-            dept1(j,i) = 0.0d0
-            dept2(j,i) = 0.0d0
-         end do
-      end do
-      do i = 1, 3
-         do j = 1, 3
-            virt(j,i) = 0.0d0
-         end do
-      end do
-c
-c     set OpenMP directives for the major loop structure
-c
-!$OMP PARALLEL default(shared) firstprivate(f) 
-!$OMP& private(i,j,k,ii,kk,kkk,e,ei,damp,expdamp,
-!$OMP& pdi,pti,pgamma,scale3,scale5,scale7,temp3,temp5,temp7,
-!$OMP& dsc3,dsc5,dsc7,psc3,psc5,psc7,gfd,xr,yr,zr,xix,yix,zix,
-!$OMP& xiy,yiy,ziy,xiz,yiz,ziz,xkx,ykx,zkx,xky,yky,zky,xkz,ykz,zkz,
-!$OMP& r,r2,rr1,rr3,rr5,rr7,rr9,rr11,iax,iay,iaz,kax,kay,kaz,
-!$OMP& vxx,vyy,vzz,vyx,vzx,vzy,frcxi,frcyi,frczi,frcxk,frcyk,frczk,
-!$OMP& ci,di,qi,ck,dk,qk,fridmp,findmp,ftm2,ftm2i,ttm2,ttm3,ttm2i,ttm3i,
-!$OMP& fdir,dixdk,dkxui,dixuk,dixukp,dkxuip,uixqkr,ukxqir,uixqkrp,
-!$OMP& ukxqirp,qiuk,qkui,qiukp,qkuip,rxqiuk,rxqkui,rxqiukp,rxqkuip,
-!$OMP& qidk,qkdi,qir,qkr,qiqkr,qkqir,qixqk,rxqir,dixr,dkxr,dixqkr,
-!$OMP& dkxqir,rxqkr,qkrxqir,rxqikr,rxqkir,rxqidk,rxqkdi,
-!$OMP& ddsc3,ddsc5,ddsc7,sc,gl,sci,scip,gli,glip,gf,gfi)
-!$OMP& firstprivate(mscale,pscale,dscale,uscale)
-!$OMP DO reduction(+:emtt,eptt,eintert,demt1,demt2,dept1,dept2,virt)
-!$OMP& schedule(guided)
 c
 c     set scale factors for permanent multipole and induced terms
 c
@@ -2157,7 +2120,7 @@ c
 c     increment the total intermolecular energy
 c
                if (molcule(ii) .ne. molcule(kk)) then
-                  eintert = eintert + e + ei
+                  einter = einter + e + ei
                end if
 c
 c     intermediate variables for the permanent components
@@ -2357,23 +2320,23 @@ c
 c
 c     increment gradient due to force and torque on first site
 c
-               demt1(1,ii) = demt1(1,ii) + ftm2(1)
-               demt1(2,ii) = demt1(2,ii) + ftm2(2)
-               demt1(3,ii) = demt1(3,ii) + ftm2(3)
-               dept1(1,ii) = dept1(1,ii) + ftm2i(1)
-               dept1(2,ii) = dept1(2,ii) + ftm2i(2)
-               dept1(3,ii) = dept1(3,ii) + ftm2i(3)
-               call torque3 (i,ttm2,ttm2i,frcxi,frcyi,frczi,demt1,dept1)
+               dem(1,ii) = dem(1,ii) + ftm2(1)
+               dem(2,ii) = dem(2,ii) + ftm2(2)
+               dem(3,ii) = dem(3,ii) + ftm2(3)
+               dep(1,ii) = dep(1,ii) + ftm2i(1)
+               dep(2,ii) = dep(2,ii) + ftm2i(2)
+               dep(3,ii) = dep(3,ii) + ftm2i(3)
+               call torque (i,ttm2,ttm2i,frcxi,frcyi,frczi)
 c
 c     increment gradient due to force and torque on second site
 c
-               demt2(1,kk) = demt2(1,kk) - ftm2(1)
-               demt2(2,kk) = demt2(2,kk) - ftm2(2)
-               demt2(3,kk) = demt2(3,kk) - ftm2(3)
-               dept2(1,kk) = dept2(1,kk) - ftm2i(1)
-               dept2(2,kk) = dept2(2,kk) - ftm2i(2)
-               dept2(3,kk) = dept2(3,kk) - ftm2i(3)
-               call torque3 (k,ttm3,ttm3i,frcxk,frcyk,frczk,demt2,dept2)
+               dem(1,kk) = dem(1,kk) - ftm2(1)
+               dem(2,kk) = dem(2,kk) - ftm2(2)
+               dem(3,kk) = dem(3,kk) - ftm2(3)
+               dep(1,kk) = dep(1,kk) - ftm2i(1)
+               dep(2,kk) = dep(2,kk) - ftm2i(2)
+               dep(3,kk) = dep(3,kk) - ftm2i(3)
+               call torque (k,ttm3,ttm3i,frcxk,frcyk,frczk)
 c
 c     increment the internal virial tensor components
 c
@@ -2425,15 +2388,15 @@ c
                vzz = -zr*(ftm2(3)+ftm2i(3)) + zix*frcxi(3)
      &                  + ziy*frcyi(3) + ziz*frczi(3) + zkx*frcxk(3)
      &                  + zky*frcyk(3) + zkz*frczk(3)
-               virt(1,1) = virt(1,1) + vxx
-               virt(2,1) = virt(2,1) + vyx
-               virt(3,1) = virt(3,1) + vzx
-               virt(1,2) = virt(1,2) + vyx
-               virt(2,2) = virt(2,2) + vyy
-               virt(3,2) = virt(3,2) + vzy
-               virt(1,3) = virt(1,3) + vzx
-               virt(2,3) = virt(2,3) + vzy
-               virt(3,3) = virt(3,3) + vzz
+               vir(1,1) = vir(1,1) + vxx
+               vir(2,1) = vir(2,1) + vyx
+               vir(3,1) = vir(3,1) + vzx
+               vir(1,2) = vir(1,2) + vyx
+               vir(2,2) = vir(2,2) + vyy
+               vir(3,2) = vir(3,2) + vzy
+               vir(1,3) = vir(1,3) + vzx
+               vir(2,3) = vir(2,3) + vzy
+               vir(3,3) = vir(3,3) + vzz
             end if
    10       continue
          end do
@@ -2474,38 +2437,12 @@ c
          end do
       end do
 c
-c     end OpenMP directives for the major loop structure
-c
-!$OMP END DO
-!$OMP END PARALLEL
-c
-c     add local copies to global variables for OpenMP calculation
-c
-      em = em + emtt
-      ep = ep + eptt
-      einter = eintert
-      do i = 1, n
-         do j = 1, 3
-            dem(j,i) = dem(j,i) + demt1(j,i) + demt2(j,i)
-            dep(j,i) = dep(j,i) + dept1(j,i) + dept2(j,i)
-         end do
-      end do
-      do i = 1, 3
-         do j = 1, 3
-            vir(j,i) = vir(j,i) + virt(j,i)
-         end do
-      end do
-c
 c     perform deallocation of some local arrays
 c
       deallocate (mscale)
       deallocate (pscale)
       deallocate (dscale)
       deallocate (uscale)
-      deallocate (demt1)
-      deallocate (demt2)
-      deallocate (dept1)
-      deallocate (dept2)
       return
       end
 c
@@ -2567,7 +2504,6 @@ c
             dep(j,i) = 0.0d0
          end do
       end do
-      if (npole .eq. 0)  return
 c
 c     set the energy unit conversion factor
 c
@@ -2854,6 +2790,7 @@ c
 c     zero out the intramolecular portion of the Ewald energy
 c
       eintra = 0.0d0
+      if (npole .eq. 0)  return
 c
 c     perform dynamic allocation of some local arrays
 c
@@ -4545,8 +4482,10 @@ c
       include 'inter.i'
       include 'math.i'
       include 'mpole.i'
+      include 'mutant.i'
       include 'polar.i'
       include 'polpot.i'
+      include 'potent.i'
       include 'virial.i'
       integer i,j,ii
       real*8 e,ei,eintra
@@ -4564,8 +4503,14 @@ c
       real*8 xdfield,xufield
       real*8 ydfield,yufield
       real*8 zdfield,zufield
+      real*8 erecip
       real*8 trq(3),trqi(3)
       real*8 frcx(3),frcy(3),frcz(3)
+      real*8 ep_temp,virold(3,3),eenvenv
+      real*8, allocatable :: dep_temp(:,:)
+      real*8, allocatable :: derecip(:,:)
+      
+      allocate (dep_temp(3,npole))
 c
 c
 c     zero out multipole and polarization energy and derivatives
@@ -4578,7 +4523,24 @@ c
             dep(j,i) = 0.0d0
          end do
       end do
-      if (npole .eq. 0)  return
+      
+c
+c     JRA zero out lambda derivative terms
+c      
+      allocate (derecip(3,n))
+      dedlm = 0.0d0
+      d2edl2m = 0.0d0
+      ereal = 0.0d0
+      erecip = 0.0d0
+      do i = 1, n
+         do j = 1, 3
+            d2edlg(j,i) = 0.0d0
+            d2edlt(j,i) = 0.0d0
+            dereal(j,i) = 0.0d0
+            derecip(j,i) = 0.0d0
+         end do
+      end do 
+      
 c
 c     set the energy unit conversion factor
 c
@@ -4599,10 +4561,91 @@ c
 c     compute the reciprocal space part of the Ewald summation
 c
       call emrecip1
+c     JRA safe recip values
+      erecip = em
+      do i = 1, n
+         do j = 1, 3
+            derecip(j,i) = dem(j,i)
+         end do
+      end do
 c
 c     compute the real space part of the Ewald summation
 c
-      call ereal1d (eintra)
+
+c
+c  JRA - Polarization does not use softcore, so two separate
+c       calculations needed. The first involves polarization
+c       for the whole system. The second just involves the real
+c       permanent energy for the soft interactions.
+c       The non-soft interactions are handled separately by 
+c       having dorealsplit = false
+c
+      if (osrwon .and. use_polar .and. dorealsplit) then
+              do i = 1, 3
+                do j = 1, 3
+                  virold(j,i) = vir(j,i)
+                end do
+              end do
+c       For soft interactions (involving atoms with mut = true)
+c               Turn off softcore, and get polarization for tot system
+              envenvon = .true.
+              use_soft = .false.
+              call ereal1d (eintra)
+c             wrong ereal so go back
+              em = erecip
+              do i = 1, n
+                do j = 1, 3
+                  dem(j,i) = derecip(j,i)
+                end do
+              end do
+c             safe pol values
+              ep_temp = ep
+              do i = 1,npole
+                 do j = 1,3
+                    dep_temp(j,i) = dep(j,i)
+                 end do
+              end do
+c             get elec values for soft interactions only
+c              calculate virial once
+              do i = 1, 3
+                do j = 1, 3
+                  vir(j,i) = virold(j,i)
+                end do
+              end do
+              envenvon = .false.
+              use_soft = .true.
+              use_polar = .false.
+              call ereal1d (eintra)
+              use_polar = .true.
+c             get pol values
+              ep = ep_temp
+              do i = 1,npole
+                 do j = 1,3
+                    dep(j,i) = dep_temp(j,i)
+                 end do
+              end do 
+
+c     JRA get real values
+              ereal = em - erecip
+              do i = 1, n
+                do j = 1, 3
+                  dereal(j,i) = dem(j,i) - derecip(j,i)
+                end do
+              end do
+c
+c  JRA - get real portions for whole system and save real values
+c
+      else
+        envenvon = .false.
+        call ereal1d (eintra)
+        ereal = em - erecip
+        do i = 1, n
+         do j = 1, 3
+            dereal(j,i) = dem(j,i) - derecip(j,i)
+         end do
+      end do
+      end if
+      
 c
 c     compute the Ewald self-energy term over all the atoms
 c
@@ -4748,6 +4791,11 @@ c
 c     intermolecular energy is total minus intramolecular part
 c
       einter = einter + em + ep - eintra
+      
+c     JRA deallocate
+      deallocate (derecip)
+      deallocate (dep_temp)
+      
       return
       end
 c
@@ -4781,13 +4829,15 @@ c
       include 'molcul.i'
       include 'mplpot.i'
       include 'mpole.i'
+      include 'mutant.i'
       include 'neigh.i'
       include 'polar.i'
       include 'polgrp.i'
       include 'polpot.i'
+      include 'potent.i'
       include 'shunt.i'
       include 'virial.i'
-      integer i,j,k
+      integer i,j,k,indexmut
       integer ii,kk,kkk
       integer iax,iay,iaz
       integer kax,kay,kaz
@@ -4801,7 +4851,7 @@ c
       real*8 dsc3,dsc5,dsc7
       real*8 psc3,psc5,psc7
       real*8 usc3,usc5
-      real*8 alsq2,alsq2n
+      real*8 alsq2,alsq2n,alsq2fac
       real*8 exp2a,ralpha
       real*8 gfd,gfdr
       real*8 xr,yr,zr
@@ -4811,12 +4861,21 @@ c
       real*8 xkx,ykx,zkx
       real*8 xky,yky,zky
       real*8 xkz,ykz,zkz
-      real*8 r,r2,rr1,rr3
+      real*8 r,r2,rr1,rr2,rr3
       real*8 rr5,rr7,rr9,rr11
       real*8 erl,erli
       real*8 vxx,vyy,vzz
       real*8 vyx,vzx,vzy
-      real*8 emtt,eptt,eintrat
+      real*8 emtt,eptt
+c     JRA added variables
+      real*8 rr13,elamij,dedlsignm
+      real*8 e_real,efix
+      real*8 dRealdL, dFixdL
+      real*8 d2RealdL2, d2FixdL2
+      real*8 scale1
+      real*8 l_n,dl_ndl, d2l_ndl2
+      real*8 betasc,dbetasc,d2betasc
+      real*8 dedlmp,d2edl2mp
       real*8 frcxi(3),frcxk(3)
       real*8 frcyi(3),frcyk(3)
       real*8 frczi(3),frczk(3)
@@ -4849,23 +4908,29 @@ c
       real*8 rxqidk(3),rxqkdi(3)
       real*8 ddsc3(3),ddsc5(3)
       real*8 ddsc7(3)
-      real*8 bn(0:5)
+c     JRA changed to 6 for lambda derivatives
+      real*8 bn(0:6)
       real*8 sc(10),gl(0:8)
       real*8 sci(8),scip(8)
       real*8 gli(7),glip(7)
       real*8 gf(7),gfi(6)
       real*8 gfr(7),gfri(6)
       real*8 gti(6),gtri(6)
-      real*8 virt(3,3)
+      real*8 viri(3,3)
+      real*8 tortemp(3)
       real*8, allocatable :: mscale(:)
       real*8, allocatable :: pscale(:)
       real*8, allocatable :: dscale(:)
       real*8, allocatable :: uscale(:)
-      real*8, allocatable :: demt1(:,:)
-      real*8, allocatable :: demt2(:,:)
-      real*8, allocatable :: dept1(:,:)
-      real*8, allocatable :: dept2(:,:)
-      logical dorl,dorli
+      real*8, allocatable :: demi(:,:)
+      real*8, allocatable :: demk(:,:)
+      real*8, allocatable :: depi(:,:)
+      real*8, allocatable :: depk(:,:)
+      real*8, allocatable :: d2edlgpi(:,:)
+      real*8, allocatable :: d2edltpi(:,:)
+      real*8, allocatable :: d2edlgpk(:,:)
+      real*8, allocatable :: d2edltpk(:,:)
+      logical dorl,dorli,soft,proceed
       character*6 mode
       external erfc
 c
@@ -4873,6 +4938,7 @@ c
 c     zero out the intramolecular portion of the Ewald energy
 c
       eintra = 0.0d0
+      if (npole .eq. 0)  return
 c
 c     perform dynamic allocation of some local arrays
 c
@@ -4880,10 +4946,14 @@ c
       allocate (pscale(n))
       allocate (dscale(n))
       allocate (uscale(n))
-      allocate (demt1(3,n))
-      allocate (demt2(3,n))
-      allocate (dept1(3,n))
-      allocate (dept2(3,n))
+      allocate (demi(3,n))
+      allocate (demk(3,n))
+      allocate (depi(3,n))
+      allocate (depk(3,n))
+      allocate (d2edlgpi(3,n))
+      allocate (d2edltpi(3,n))
+      allocate (d2edlgpk(3,n))
+      allocate (d2edltpk(3,n))
 c
 c     set arrays needed to scale connected atom interactions
 c
@@ -4899,36 +4969,62 @@ c
       f = electric / dielec
       mode = 'EWALD'
       call switch (mode)
+      
+      alsq2 = 2.0d0 * aewald*aewald
+      alsq2fac = 1.0d0 / (sqrtpi*aewald)
+      
+c
+c     JRA initialize lambda variables, also prepare for OpenMP
+c      
+c      dedlm = 0.0d0
+c      d2edl2m = 0.0d0
+      dedlmp = dedlm
+      d2edl2mp = d2edl2m
+      do i = 1, n
+        do j = 1,3
+c          d2edlg(j,i) = 0.0d0
+c          d2edlt(j,i) = 0.0d0
+          d2edlgpi(j,i) = 0.0d0
+          d2edltpi(j,i) = 0.0d0
+          d2edlgpk(j,i) = 0.0d0
+          d2edltpk(j,i) = 0.0d0
+        end do
+      end do
+      
 c
 c     initialize local variables for OpenMP calculation
 c
       emtt = 0.0d0
       eptt = 0.0d0
-      eintrat = eintra
       do i = 1, n
          do j = 1, 3
-            demt1(j,i) = 0.0d0
-            demt2(j,i) = 0.0d0
-            dept1(j,i) = 0.0d0
-            dept2(j,i) = 0.0d0
+            demi(j,i) = 0.0d0
+            demk(j,i) = 0.0d0
+            depi(j,i) = 0.0d0
+            depk(j,i) = 0.0d0
          end do
       end do
       do i = 1, 3
          do j = 1, 3
-            virt(j,i) = 0.0d0
+            viri(j,i) = 0.0d0
          end do
       end do
 c
 c     set OpenMP directives for the major loop structure
 c
+c     Xiao changes from dynamic to guided OMP schedule
+c      JRA added variables
 !$OMP PARALLEL default(shared) firstprivate(f) 
 !$OMP& private(i,j,k,ii,kk,kkk,e,ei,bfac,damp,expdamp,
 !$OMP& pdi,pti,pgamma,scale3,scale5,scale7,temp3,temp5,temp7,
-!$OMP& dsc3,dsc5,dsc7,psc3,psc5,psc7,usc3,usc5,alsq2,alsq2n,
+!$OMP& dsc3,dsc5,dsc7,psc3,psc5,psc7,usc3,usc5,alsq2n,
 !$OMP& exp2a,ralpha,gfd,gfdr,xr,yr,zr,xix,yix,zix,
 !$OMP& xiy,yiy,ziy,xiz,yiz,ziz,xkx,ykx,zkx,xky,yky,zky,
-!$OMP& xkz,ykz,zkz,r,r2,rr1,rr3,rr5,rr7,rr9,rr11,
-!$OMP& erl,erli,iax,iay,iaz,kax,kay,kaz,vxx,vyy,vzz,vyx,vzx,vzy,
+!$OMP& xkz,ykz,zkz,r,r2,rr1,rr2,rr3,rr5,rr7,rr9,rr11,
+!$OMP& erl,erli,vxx,vyy,vzz,vyx,vzx,vzy,rr13,elamij,dedlsignm,
+!$OMP& iax,iay,iaz,kax,kay,kaz,
+!$OMP& e_real,efix,dRealdL,dFixdL,d2RealdL2,d2FixdL2,scale1,
+!$OMP& l_n,dl_ndl,d2l_ndl2,betasc,dbetasc,d2betasc,
 !$OMP& frcxi,frcyi,frczi,frcxk,frcyk,frczk,ci,di,qi,ck,dk,qk,
 !$OMP& fridmp,findmp,ftm2,ftm2i,ftm2r,ftm2ri,ttm2,ttm3,
 !$OMP& ttm2i,ttm3i,ttm2r,ttm3r,ttm2ri,ttm3ri,fdir,dixdk,
@@ -4937,9 +5033,10 @@ c
 !$OMP& qidk,qkdi,qir,qkr,qiqkr,qkqir,qixqk,rxqir,dixr,dkxr,
 !$OMP& dixqkr,dkxqir,rxqkr,qkrxqir,rxqikr,rxqkir,rxqidk,rxqkdi,
 !$OMP& ddsc3,ddsc5,ddsc7,bn,sc,gl,sci,scip,gli,glip,gf,gfi,
-!$OMP& gfr,gfri,gti,gtri,dorl,dorli)
+!$OMP& gfr,gfri,gti,gtri,tortemp,dorl,dorli,soft,proceed)
 !$OMP& firstprivate(mscale,pscale,dscale,uscale)
-!$OMP DO reduction(+:emtt,eptt,eintrat,demt1,demt2,dept1,dept2,virt)
+!$OMP DO reduction(+:emtt,eptt,viri,demi,depi,demk,depk,
+!$OMP& dedlmp,d2edl2mp,d2edlgpi,d2edltpi,d2edlgpk,d2edltpk)
 !$OMP& schedule(guided)
 c
 c     compute the real space portion of the Ewald summation
@@ -5008,8 +5105,43 @@ c
             zr = z(kk) - z(ii)
             call image (xr,yr,zr)
             r2 = xr*xr + yr*yr + zr*zr
-            if (r2 .le. off2) then
-               r = sqrt(r2)
+            
+c
+c           JRA add in softcore if there is a perturbation
+c
+            betasc = 0.0d0
+            l_n = 1.0d0
+c            soft = (mut(ii) .and. (.not. mut(kk))) 
+c     &              .or. (mut(kk) .and. (.not. mut(ii)))
+            soft = mut(ii) .or. mut(kk)
+            proceed = .true.
+            dedlsignm = 1.0d0
+            elamij = 1.0d0
+            if (osrwon .and. use_soft 
+     &                    .and. soft) then
+              elamij = elambda
+c      JRA - if in system1 calc, use (1-lambda)
+              if (isrelative .and. rel_ligA) then
+                elamij = 1.0d0 - elambda
+                dedlsignm = -1.0d0
+              end if
+              betasc = scalpham*(1.0d0 - elamij)**2
+              l_n = elamij**scexpm
+            end if
+c
+c     JRA - skip soft interactions if envenvon = .true.
+c         This is to save time when dorealsplit = true
+c           The env calculations (non soft) are done later
+c
+            if (dorealsplit .and. osrwon .and. .not.envenvon) then
+              if (.not. soft) proceed = .false.
+            end if
+
+            if (proceed .and. r2 .le. off2) then
+c              JRA changed r calculation
+               r = sqrt(r2+betasc)
+               rr1 = 1.0d0 / r
+               rr2 = rr1 * rr1
                ck = rpole(1,k)
                dk(1) = rpole(2,k)
                dk(2) = rpole(3,k)
@@ -5027,25 +5159,38 @@ c
 c     calculate the real space error function terms
 c
                ralpha = aewald * r
-               bn(0) = erfc(ralpha) / r
-               alsq2 = 2.0d0 * aewald**2
-               alsq2n = 0.0d0
-               if (aewald .gt. 0.0d0)  alsq2n = 1.0d0 / (sqrtpi*aewald)
+c               bn(0) = erfc(ralpha) / r
+               bn(0) = erfc(ralpha) * rr1
+               alsq2n=alsq2fac
+c               alsq2 = 2.0d0 * aewald**2
+c               alsq2n = 0.0d0
+c               if (aewald .gt. 0.0d0)  alsq2n = 1.0d0 / (sqrtpi*aewald)
                exp2a = exp(-ralpha**2)
-               do j = 1, 5
+c              JRA changed to 6 for derivatives, also redo r2
+               r2 = r*r
+               do j = 1, 6
                   bfac = dble(2*j-1)
                   alsq2n = alsq2 * alsq2n
-                  bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) / r2
+c                  bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) / r2
+                  bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) * rr2
                end do
 c
 c     apply Thole polarization damping to scale factors
 c
-               rr1 = 1.0d0 / r
-               rr3 = rr1 / r2
-               rr5 = 3.0d0 * rr3 / r2
-               rr7 = 5.0d0 * rr5 / r2
-               rr9 = 7.0d0 * rr7 / r2
-               rr11 = 9.0d0 * rr9 / r2
+c               rr1 = 1.0d0 / r
+c               rr3 = rr1 / r2
+c               rr5 = 3.0d0 * rr3 / r2
+c               rr7 = 5.0d0 * rr5 / r2
+c               rr9 = 7.0d0 * rr7 / r2
+c               rr11 = 9.0d0 * rr9 / r2
+c              JRA term used for lambda derivatives
+c               rr13 = 11.0d0 * rr11 / r2
+               rr3 = rr1 * rr2
+               rr5 = 3.0d0 * rr3 * rr2
+               rr7 = 5.0d0 * rr5 * rr2
+               rr9 = 7.0d0 * rr7 * rr2
+               rr11 = 9.0d0 * rr9 * rr2
+               rr13 = 11.0d0 * rr11 * rr2
                scale3 = 1.0d0
                scale5 = 1.0d0
                scale7 = 1.0d0
@@ -5064,7 +5209,8 @@ c
                      scale5 = 1.0d0 - (1.0d0-damp)*expdamp
                      scale7 = 1.0d0 - (1.0d0-damp+0.6d0*damp**2)
      &                                       *expdamp
-                     temp3 = -3.0d0 * damp * expdamp / r2
+c                     temp3 = -3.0d0 * damp * expdamp / r2
+                     temp3 = -3.0d0 * damp * expdamp * rr2
                      temp5 = -damp
                      temp7 = -0.2d0 - 0.6d0*damp
                      ddsc3(1) = temp3 * xr
@@ -5292,9 +5438,17 @@ c
                erli = 0.5d0*(rr3*(gli(1)+gli(6))*psc3
      &                   + rr5*(gli(2)+gli(7))*psc5
      &                   + rr7*gli(3)*psc7)
+     
+c
+c     JRA save the e and erl for later elambda derivatives
+c
+               e_real = e
+               efix = erl     
+     
+c     JRA softcore e
                e = e - erl
                ei = ei - erli
-               e = f * e
+               e = l_n * f * e
                ei = f * ei
                emtt = emtt + e
                eptt = eptt + ei
@@ -5304,9 +5458,9 @@ c     intramolecular distances are less than half of cell
 c     length and less than the ewald cutoff
 c
                if (molcule(ii) .eq. molcule(kk)) then
-                  eintrat = eintrat + mscale(kk)*erl*f
-                  eintrat = eintrat + 0.5d0*pscale(kk)
-     &                         * (rr3*(gli(1)+gli(6))*scale3
+                  eintra = eintra + mscale(kk)*erl*f
+                  eintra = eintra + 0.5d0*pscale(kk)
+     &                        * (rr3*(gli(1)+gli(6))*scale3
      &                              + rr5*(gli(2)+gli(7))*scale5
      &                              + rr7*gli(3)*scale7)
                end if
@@ -5684,27 +5838,42 @@ c
                end do
 c
 c     increment gradient due to force and torque on first site
-c
-               demt1(1,ii) = demt1(1,ii) + ftm2(1)
-               demt1(2,ii) = demt1(2,ii) + ftm2(2)
-               demt1(3,ii) = demt1(3,ii) + ftm2(3)
-               dept1(1,ii) = dept1(1,ii) + ftm2i(1)
-               dept1(2,ii) = dept1(2,ii) + ftm2i(2)
-               dept1(3,ii) = dept1(3,ii) + ftm2i(3)
-               call torque3 (i,ttm2,ttm2i,frcxi,frcyi,frczi,demt1,dept1)
+c        JRA softcore addition
+               demi(1,ii) = demi(1,ii) + l_n*ftm2(1)
+               demi(2,ii) = demi(2,ii) + l_n*ftm2(2)
+               demi(3,ii) = demi(3,ii) + l_n*ftm2(3)
+               depi(1,ii) = depi(1,ii) + ftm2i(1)
+               depi(2,ii) = depi(2,ii) + ftm2i(2)
+               depi(3,ii) = depi(3,ii) + ftm2i(3)
+c              JRA softcore addition
+c               call torque3 (i,ttm2,ttm2i,frcxi,frcyi,frczi,demi,depi)
+            do j = 1,3
+                 tortemp(j) = l_n*ttm2(j)
+               end do
+               call torque3 (i,tortemp,ttm2i,frcxi,frcyi,frczi,demi,
+     &                       depi)
+     
 c
 c     increment gradient due to force and torque on second site
 c
-               demt2(1,kk) = demt2(1,kk) - ftm2(1)
-               demt2(2,kk) = demt2(2,kk) - ftm2(2)
-               demt2(3,kk) = demt2(3,kk) - ftm2(3)
-               dept2(1,kk) = dept2(1,kk) - ftm2i(1)
-               dept2(2,kk) = dept2(2,kk) - ftm2i(2)
-               dept2(3,kk) = dept2(3,kk) - ftm2i(3)
-               call torque3 (k,ttm3,ttm3i,frcxk,frcyk,frczk,demt2,dept2)
+               demk(1,kk) = demk(1,kk) - l_n*ftm2(1)
+               demk(2,kk) = demk(2,kk) - l_n*ftm2(2)
+               demk(3,kk) = demk(3,kk) - l_n*ftm2(3)
+               depk(1,kk) = depk(1,kk) - ftm2i(1)
+               depk(2,kk) = depk(2,kk) - ftm2i(2)
+               depk(3,kk) = depk(3,kk) - ftm2i(3)
+c              JRA softcore addition
+c               call torque3 (k,ttm3,ttm3i,frcxk,frcyk,frczk,demk,depk)
+               do j = 1,3
+                 tortemp(j) = l_n*ttm3(j)
+               end do
+               call torque3 (k,tortemp,ttm3i,frcxk,frcyk,frczk,demk,
+     &                       depk)
+     
+     
 c
 c     increment the internal virial tensor components
-c
+c        JRA added softcore 
                iaz = zaxis(i)
                iax = xaxis(i)
                iay = yaxis(i)
@@ -5735,33 +5904,305 @@ c
                xky = x(kay) - x(kk)
                yky = y(kay) - y(kk)
                zky = z(kay) - z(kk)
-               vxx = -xr*(ftm2(1)+ftm2i(1)) + xix*frcxi(1)
+               vxx = -xr*(l_n*ftm2(1)+ftm2i(1)) + xix*frcxi(1)
      &                  + xiy*frcyi(1) + xiz*frczi(1) + xkx*frcxk(1)
      &                  + xky*frcyk(1) + xkz*frczk(1)
-               vyx = -yr*(ftm2(1)+ftm2i(1)) + yix*frcxi(1)
+               vyx = -yr*(l_n*ftm2(1)+ftm2i(1)) + yix*frcxi(1)
      &                  + yiy*frcyi(1) + yiz*frczi(1) + ykx*frcxk(1)
      &                  + yky*frcyk(1) + ykz*frczk(1)
-               vzx = -zr*(ftm2(1)+ftm2i(1)) + zix*frcxi(1)
+               vzx = -zr*(l_n*ftm2(1)+ftm2i(1)) + zix*frcxi(1)
      &                  + ziy*frcyi(1) + ziz*frczi(1) + zkx*frcxk(1)
      &                  + zky*frcyk(1) + zkz*frczk(1)
-               vyy = -yr*(ftm2(2)+ftm2i(2)) + yix*frcxi(2)
+               vyy = -yr*(l_n*ftm2(2)+ftm2i(2)) + yix*frcxi(2)
      &                  + yiy*frcyi(2) + yiz*frczi(2) + ykx*frcxk(2)
      &                  + yky*frcyk(2) + ykz*frczk(2)
-               vzy = -zr*(ftm2(2)+ftm2i(2)) + zix*frcxi(2)
+               vzy = -zr*(l_n*ftm2(2)+ftm2i(2)) + zix*frcxi(2)
      &                  + ziy*frcyi(2) + ziz*frczi(2) + zkx*frcxk(2)
      &                  + zky*frcyk(2) + zkz*frczk(2)
-               vzz = -zr*(ftm2(3)+ftm2i(3)) + zix*frcxi(3)
+               vzz = -zr*(l_n*ftm2(3)+ftm2i(3)) + zix*frcxi(3)
      &                  + ziy*frcyi(3) + ziz*frczi(3) + zkx*frcxk(3)
      &                  + zky*frcyk(3) + zkz*frczk(3)
-               virt(1,1) = virt(1,1) + vxx
-               virt(2,1) = virt(2,1) + vyx
-               virt(3,1) = virt(3,1) + vzx
-               virt(1,2) = virt(1,2) + vyx
-               virt(2,2) = virt(2,2) + vyy
-               virt(3,2) = virt(3,2) + vzy
-               virt(1,3) = virt(1,3) + vzx
-               virt(2,3) = virt(2,3) + vzy
-               virt(3,3) = virt(3,3) + vzz
+               viri(1,1) = viri(1,1) + vxx
+               viri(2,1) = viri(2,1) + vyx
+               viri(3,1) = viri(3,1) + vzx
+               viri(1,2) = viri(1,2) + vyx
+               viri(2,2) = viri(2,2) + vyy
+               viri(3,2) = viri(3,2) + vzy
+               viri(1,3) = viri(1,3) + vzx
+               viri(2,3) = viri(2,3) + vzy
+               viri(3,3) = viri(3,3) + vzz
+     
+     
+c --------------------------------------------------
+c     JRA calculate elambda gradients if soft
+c --------------------------------------------------
+
+c              check this later!!!
+c               dedlsignm = 1.0d0
+               if (osrwon .and. use_soft .and. soft) then
+                  if (scexpm .eq. 1.0d0) then
+                    dl_ndl = 1.0d0*dedlsignm
+                  else 
+                    dl_ndl = dedlsignm*scexpm*elamij**(scexpm-1.0d0)
+                  end if
+                  
+c
+c         Calculation of the first part of the gradient of dedl
+c                  
+                  
+c
+c     increment gradient of dedl due to force and torque on first site
+c
+                  do j = 1,3
+                     d2edlgpi(j,ii) = d2edlgpi(j,ii)
+     &                            + dl_ndl*ftm2(j)
+                     d2edltpi(j,ii) = d2edltpi(j,ii)
+     &                            + dl_ndl*ttm2(j)
+c                     tortemp(j) = d2edltpi(j,ii)
+                     tortemp(j) = dl_ndl*ttm2(j)
+                  end do
+                  call torque3 (i,tortemp,ttm2i,
+     &                       frcxi,frcyi,frczi,d2edlgpi,depi)
+c
+c     increment gradient of dedl due to force and torque on second site
+c
+                  do j = 1,3
+                     d2edlgpk(j,kk) = d2edlgpk(j,kk)
+     &                            - dl_ndl*ftm2(j)
+                     d2edltpk(j,kk) = d2edltpk(j,kk)
+     &                            - dl_ndl*ttm3(j)
+c                     tortemp(j) = d2edltpk(j,kk)
+                     tortemp(j) = dl_ndl*ttm3(j)
+                  end do
+                  call torque3 (k,tortemp,ttm3i,
+     &                       frcxk,frcyk,frczk,d2edlgpk,depk)
+c
+c          calculation of dedl and d2edl2
+c                  
+                  dRealdL = gl(0)*bn(1) + (gl(1)+gl(6))*bn(2) 
+     &                   + (gl(2)+gl(7)+gl(8))*bn(3) 
+     &                   + (gl(3)+gl(5))*bn(4) + gl(4)*bn(5);
+                  d2RealdL2 = gl(0)*bn(2) + (gl(1)+gl(6))*bn(3)
+     &                   + (gl(2)+gl(7)+gl(8))*bn(4) 
+     &                   + (gl(3)+gl(5))*bn(5) + gl(4)*bn(6);
+c                  dbetasc = -2.0d0*scalpham*(1-elambda)
+c                  d2betasc = 2.0d0*scalpham
+c                 check why this is correct from java code
+                  dbetasc = scalpham*(1-elamij)*dedlsignm
+                  d2betasc = -scalpham
+                  if (scexpm-2.0d0 .lt. 0) then
+                     d2l_ndl2 = 0
+                  else
+                     d2l_ndl2 = scexpm*(scexpm-1.0d0)
+     &                                  *elamij**(scexpm-2.0d0)
+                  end if
+                  dedlmp = dedlmp + f 
+     &                 * (dl_ndl*e_real + l_n*dbetasc*dRealdL)
+                  d2edl2mp = d2edl2mp + f 
+     &                 * ((d2l_ndl2*e_real
+     &                 + dl_ndl*dbetasc*dRealdL
+     &                 + dl_ndl*dbetasc*dRealdL)
+     &                 + l_n*d2betasc*dRealdL
+     &                 + l_n *dbetasc*dbetasc*d2RealdL2)
+c                  d2edl2mp = d2edl2mp + f 
+c     &                 * (dedlsignm * (d2l_ndl2*e_real
+c     &                 + dl_ndl*dbetasc*dRealdL)
+c     &                 + l_n*d2betasc*dRealdL
+c     &                 + l_n *dbetasc*dbetasc*d2RealdL2)
+                  
+                  dFixdL = gl(0)*rr3 + (gl(1)+gl(6))*rr5 
+     &                   + (gl(2)+gl(7)+gl(8))*rr7 + (gl(3)+gl(5))*rr9
+     &                   + gl(4)*rr11;
+                  d2FixdL2 = gl(0)*rr5 + (gl(1)+gl(6))*rr7 
+     &                   + (gl(2)+gl(7)+gl(8))*rr9
+     &                   + (gl(3)+gl(5))*rr11 + gl(4)*rr13;
+                  scale1 = (1.0d0-mscale(kk))
+                  dFixdL = dFixdL * scale1
+                  d2FixdL2 = d2FixdL2 * scale1
+                  dedlmp = dedlmp - f 
+     &                 * (dl_ndl*efix + l_n*dbetasc*dFixdL)
+                  d2edl2mp = d2edl2mp - f 
+     &                 * ((d2l_ndl2*efix
+     &                 + dl_ndl*dbetasc*dFixdL
+     &                 + dl_ndl*dbetasc*dFixdL)
+     &                 + l_n*d2betasc*dFixdL
+     &                 + l_n *dbetasc*dbetasc*d2FixdL2)
+c                  d2edl2mp = d2edl2mp - f 
+c     &                 * (dedlsignm * (d2l_ndl2*efix
+c     &                 + dl_ndl*dbetasc*dFixdL)
+c     &                 + l_n*d2betasc*dFixdL
+c     &                 + l_n *dbetasc*dbetasc*d2FixdL2)
+     
+     
+c
+c        The following code is used for calculating the
+c          second part of the gradient of dedl
+c     
+     
+     
+c
+c     get the permanent force with screening sc
+c
+               gf(1) = bn(2)*gl(0) + bn(3)*(gl(1)+gl(6))
+     &                    + bn(4)*(gl(2)+gl(7)+gl(8))
+     &                    + bn(5)*(gl(3)+gl(5)) + bn(6)*gl(4)
+               gf(2) = -ck*bn(2) + sc(4)*bn(3) - sc(6)*bn(4)
+               gf(3) = ci*bn(2) + sc(3)*bn(3) + sc(5)*bn(4)
+               gf(4) = 2.0d0 * bn(3)
+               gf(5) = 2.0d0 * (-ck*bn(3)+sc(4)*bn(4)-sc(6)*bn(5))
+               gf(6) = 2.0d0 * (-ci*bn(3)-sc(3)*bn(4)-sc(5)*bn(5))
+               gf(7) = 4.0d0 * bn(4)
+               ftm2(1) = gf(1)*xr + gf(2)*di(1) + gf(3)*dk(1)
+     &                      + gf(4)*(qkdi(1)-qidk(1)) + gf(5)*qir(1)
+     &                      + gf(6)*qkr(1) + gf(7)*(qiqkr(1)+qkqir(1))
+               ftm2(2) = gf(1)*yr + gf(2)*di(2) + gf(3)*dk(2)
+     &                      + gf(4)*(qkdi(2)-qidk(2)) + gf(5)*qir(2)
+     &                      + gf(6)*qkr(2) + gf(7)*(qiqkr(2)+qkqir(2))
+               ftm2(3) = gf(1)*zr + gf(2)*di(3) + gf(3)*dk(3)
+     &                      + gf(4)*(qkdi(3)-qidk(3)) + gf(5)*qir(3)
+     &                      + gf(6)*qkr(3) + gf(7)*(qiqkr(3)+qkqir(3))
+c
+c     get the permanent force without screening sc
+c
+               if (dorl) then
+                  gfr(1) = rr5*gl(0) + rr7*(gl(1)+gl(6))
+     &                        + rr9*(gl(2)+gl(7)+gl(8))
+     &                        + rr11*(gl(3)+gl(5)) + rr13*gl(4)
+                  gfr(2) = -ck*rr5 + sc(4)*rr7 - sc(6)*rr9
+                  gfr(3) = ci*rr5 + sc(3)*rr7 + sc(5)*rr9
+                  gfr(4) = 2.0d0 * rr7
+                  gfr(5) = 2.0d0 * (-ck*rr7+sc(4)*rr9-sc(6)*rr11)
+                  gfr(6) = 2.0d0 * (-ci*rr7-sc(3)*rr9-sc(5)*rr11)
+                  gfr(7) = 4.0d0 * rr9
+                  ftm2r(1) = gfr(1)*xr + gfr(2)*di(1) + gfr(3)*dk(1)
+     &                          + gfr(4)*(qkdi(1)-qidk(1))
+     &                          + gfr(5)*qir(1) + gfr(6)*qkr(1)
+     &                          + gfr(7)*(qiqkr(1)+qkqir(1))
+                  ftm2r(2) = gfr(1)*yr + gfr(2)*di(2) + gfr(3)*dk(2)
+     &                          + gfr(4)*(qkdi(2)-qidk(2))
+     &                          + gfr(5)*qir(2) + gfr(6)*qkr(2)
+     &                          + gfr(7)*(qiqkr(2)+qkqir(2))
+                  ftm2r(3) = gfr(1)*zr + gfr(2)*di(3) + gfr(3)*dk(3)
+     &                          + gfr(4)*(qkdi(3)-qidk(3))
+     &                          + gfr(5)*qir(3) + gfr(6)*qkr(3)
+     &                          + gfr(7)*(qiqkr(3)+qkqir(3))
+               end if
+c
+c     get the permanent torque with screening sc
+c
+               ttm2(1) = -bn(2)*dixdk(1) + gf(2)*dixr(1)
+     &                      + gf(4)*(dixqkr(1)+dkxqir(1)
+     &                              +rxqidk(1)-2.0d0*qixqk(1))
+     &                      - gf(5)*rxqir(1)
+     &                      - gf(7)*(rxqikr(1)+qkrxqir(1))
+               ttm2(2) = -bn(2)*dixdk(2) + gf(2)*dixr(2)
+     &                      + gf(4)*(dixqkr(2)+dkxqir(2)
+     &                              +rxqidk(2)-2.0d0*qixqk(2))
+     &                      - gf(5)*rxqir(2)
+     &                      - gf(7)*(rxqikr(2)+qkrxqir(2))
+               ttm2(3) = -bn(2)*dixdk(3) + gf(2)*dixr(3)
+     &                      + gf(4)*(dixqkr(3)+dkxqir(3)
+     &                              +rxqidk(3)-2.0d0*qixqk(3))
+     &                      - gf(5)*rxqir(3)
+     &                      - gf(7)*(rxqikr(3)+qkrxqir(3))
+               ttm3(1) = bn(2)*dixdk(1) + gf(3)*dkxr(1)
+     &                      - gf(4)*(dixqkr(1)+dkxqir(1)
+     &                              +rxqkdi(1)-2.0d0*qixqk(1))
+     &                      - gf(6)*rxqkr(1)
+     &                      - gf(7)*(rxqkir(1)-qkrxqir(1))
+               ttm3(2) = bn(2)*dixdk(2) + gf(3)*dkxr(2)
+     &                      - gf(4)*(dixqkr(2)+dkxqir(2)
+     &                              +rxqkdi(2)-2.0d0*qixqk(2))
+     &                      - gf(6)*rxqkr(2)
+     &                      - gf(7)*(rxqkir(2)-qkrxqir(2))
+               ttm3(3) = bn(2)*dixdk(3) + gf(3)*dkxr(3)
+     &                      - gf(4)*(dixqkr(3)+dkxqir(3)
+     &                              +rxqkdi(3)-2.0d0*qixqk(3))
+     &                      - gf(6)*rxqkr(3)
+     &                      - gf(7)*(rxqkir(3)-qkrxqir(3))
+c
+c     get the permanent torque without screening sc
+c
+               if (dorl) then
+                  ttm2r(1) = -rr5*dixdk(1) + gfr(2)*dixr(1)
+     &                          + gfr(4)*(dixqkr(1)+dkxqir(1)
+     &                                   +rxqidk(1)-2.0d0*qixqk(1))
+     &                          - gfr(5)*rxqir(1)
+     &                          - gfr(7)*(rxqikr(1)+qkrxqir(1))
+                  ttm2r(2) = -rr5*dixdk(2) + gfr(2)*dixr(2)
+     &                          + gfr(4)*(dixqkr(2)+dkxqir(2)
+     &                                   +rxqidk(2)-2.0d0*qixqk(2))
+     &                          - gfr(5)*rxqir(2)
+     &                          - gfr(7)*(rxqikr(2)+qkrxqir(2))
+                  ttm2r(3) = -rr5*dixdk(3) + gfr(2)*dixr(3)
+     &                          + gfr(4)*(dixqkr(3)+dkxqir(3)
+     &                                   +rxqidk(3)-2.0d0*qixqk(3))
+     &                          - gfr(5)*rxqir(3)
+     &                          - gfr(7)*(rxqikr(3)+qkrxqir(3))
+                  ttm3r(1) = rr5*dixdk(1) + gfr(3)*dkxr(1)
+     &                          - gfr(4)*(dixqkr(1)+dkxqir(1)
+     &                                   +rxqkdi(1)-2.0d0*qixqk(1))
+     &                          - gfr(6)*rxqkr(1)
+     &                          - gfr(7)*(rxqkir(1)-qkrxqir(1))
+                  ttm3r(2) = rr5*dixdk(2) + gfr(3)*dkxr(2)
+     &                          - gfr(4)*(dixqkr(2)+dkxqir(2)
+     &                                   +rxqkdi(2)-2.0d0*qixqk(2))
+     &                          - gfr(6)*rxqkr(2)
+     &                          - gfr(7)*(rxqkir(2)-qkrxqir(2))
+                  ttm3r(3) = rr5*dixdk(3) + gfr(3)*dkxr(3)
+     &                          - gfr(4)*(dixqkr(3)+dkxqir(3)
+     &                                   +rxqkdi(3)-2.0d0*qixqk(3))
+     &                          - gfr(6)*rxqkr(3)
+     &                          - gfr(7)*(rxqkir(3)-qkrxqir(3))
+               end if
+c
+c     handle the case where scaling is used sc
+c
+               do j = 1, 3
+                  ftm2(j) = f * (ftm2(j)-(1.0d0-mscale(kk))*ftm2r(j))
+                  ftm2i(j) = f * (ftm2i(j)-ftm2ri(j))
+                  ttm2(j) = f * (ttm2(j)-(1.0d0-mscale(kk))*ttm2r(j))
+                  ttm2i(j) = f * (ttm2i(j)-ttm2ri(j))
+                  ttm3(j) = f * (ttm3(j)-(1.0d0-mscale(kk))*ttm3r(j))
+                  ttm3i(j) = f * (ttm3i(j)-ttm3ri(j))
+               end do
+c
+c     addin second term of dUdL
+c
+c
+c     increment gradient of dedl due to force and torque on first site
+c
+               do j = 1,3
+                     d2edlgpi(j,ii) = d2edlgpi(j,ii)
+     &                            + l_n*dbetasc*ftm2(j)
+                     d2edltpi(j,ii) = d2edltpi(j,ii)
+     &                            + l_n*dbetasc*ttm2(j)
+                     tortemp(j) = l_n*dbetasc*ttm2(j)
+               end do
+               call torque3 (i,tortemp,ttm2i,
+     &                       frcxi,frcyi,frczi,d2edlgpi,depi)
+c
+c     increment gradient of dedl due to force and torque on second site
+c
+               do j = 1,3
+                     d2edlgpk(j,kk) = d2edlgpk(j,kk)
+     &                            - l_n*dbetasc*ftm2(j)
+                     d2edltpk(j,kk) = d2edltpk(j,kk)
+     &                            - l_n*dbetasc*ttm3(j)
+                     tortemp(j) = l_n*dbetasc*ttm3(j)
+               end do
+               call torque3 (k,tortemp,ttm3i,
+     &                       frcxk,frcyk,frczk,d2edlgpk,depk)
+                  
+                  
+               end if
+               
+c --------------------------------------------------
+c     JRA end of lambda derivative calculation
+c --------------------------------------------------
+    
+               
+
             end if
          end do
 c
@@ -5810,18 +6251,30 @@ c     add local copies to global variables for OpenMP calculation
 c
       em = em + emtt
       ep = ep + eptt
-      eintra = eintrat
       do i = 1, n
          do j = 1, 3
-            dem(j,i) = dem(j,i) + demt1(j,i) + demt2(j,i)
-            dep(j,i) = dep(j,i) + dept1(j,i) + dept2(j,i)
+            dem(j,i) = dem(j,i) + demi(j,i) + demk(j,i)
+            dep(j,i) = dep(j,i) + depi(j,i) + depk(j,i)
          end do
       end do
       do i = 1, 3
          do j = 1, 3
-            vir(j,i) = vir(j,i) + virt(j,i)
+            vir(j,i) = vir(j,i) + viri(j,i)
          end do
       end do
+c
+c     JRA OpenMP for lambda variables
+c
+      dedlm = dedlmp
+      d2edl2m = d2edl2mp
+      do i = 1, n
+         do j = 1, 3
+            d2edlg(j,i) = d2edlgpi(j,i) + d2edlgpk(j,i)
+c            d2edlg(j,i) = d2edlg(j,i) + d2edlgpi(j,i) + d2edlgpk(j,i)
+c            d2edlt(j,i) = d2edltp(j,i)
+         end do
+      end do
+      
 c
 c     perform deallocation of some local arrays
 c
@@ -5829,10 +6282,14 @@ c
       deallocate (pscale)
       deallocate (dscale)
       deallocate (uscale)
-      deallocate (demt1)
-      deallocate (demt2)
-      deallocate (dept1)
-      deallocate (dept2)
+      deallocate (demi)
+      deallocate (demk)
+      deallocate (depi)
+      deallocate (depk)
+      deallocate (d2edlgpi)
+      deallocate (d2edltpi)
+      deallocate (d2edlgpk)
+      deallocate (d2edltpk)
       return
       end
 c

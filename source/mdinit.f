@@ -167,7 +167,7 @@ c
          end do
       else
          do i = 1, n
-            if (use(i) .and. mass(i).le.0.0d0 .and. atomic(i).ne.0) then
+            if (use(i) .and. mass(i).le.0.0d0) then
                mass(i) = 1.0d0
                totmass = totmass + 1.0d0
                write (iout,30)  i
@@ -361,7 +361,7 @@ c
          allocate (derivs(3,n))
          call gradslow (e,derivs)
          do i = 1, n
-            if (use(i) .and. mass(i).ne.0.0d0) then
+            if (use(i)) then
                speed = maxwell (mass(i),kelvin)
                call ranvec (vec)
                do j = 1, 3
@@ -372,18 +372,15 @@ c
                do j = 1, 3
                   v(j,i) = 0.0d0
                   a(j,i) = 0.0d0
+                  aalt(j,i) = 0.0d0
                end do
             end if
          end do
          call gradfast (e,derivs)
          do i = 1, n
-            if (use(i) .and. mass(i).ne.0.0d0) then
+            if (use(i)) then
                do j = 1, 3
                   aalt(j,i) = -convert * derivs(j,i) / mass(i)
-               end do
-            else
-               do j = 1, 3
-                  aalt(j,i) = 0.0d0
                end do
             end if
          end do
@@ -396,7 +393,7 @@ c
          allocate (derivs(3,n))
          call gradient (e,derivs)
          do i = 1, n
-            if (use(i) .and. mass(i).ne.0.0d0) then
+            if (use(i)) then
                speed = maxwell (mass(i),kelvin)
                call ranvec (vec)
                do j = 1, 3

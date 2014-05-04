@@ -49,7 +49,6 @@ c
       et = 0.0d0
       ept = 0.0d0
       ebt = 0.0d0
-      eat = 0.0d0
       ett = 0.0d0
       ev = 0.0d0
       ec = 0.0d0
@@ -78,7 +77,6 @@ c
          aet(i) = 0.0d0
          aept(i) = 0.0d0
          aebt(i) = 0.0d0
-         aeat(i) = 0.0d0
          aett(i) = 0.0d0
          aev(i) = 0.0d0
          aec(i) = 0.0d0
@@ -132,7 +130,6 @@ c
       if (use_tors)  call etors3
       if (use_pitors)  call epitors3
       if (use_strtor)  call estrtor3
-      if (use_angtor)  call eangtor3
       if (use_tortor)  call etortor3
 c
 c     call the van der Waals energy component routines
@@ -163,8 +160,8 @@ c
 c     sum up to give the total potential energy
 c
       esum = eb + ea + eba + eub + eaa + eopb + eopd + eid + eit
-     &          + et + ept + ebt + eat + ett + ev + ec + ecd + ed
-     &          + em + ep + er + es + elf + eg + ex
+     &          + et + ept + ebt + ett + ev + ec + ecd + ed + em
+     &          + ep + er + es + elf + eg + ex
       energy = esum
 c
 c     sum up to give the total potential energy per atom
@@ -172,10 +169,9 @@ c
       do i = 1, n
          aesum(i) = aeb(i) + aea(i) + aeba(i) + aeub(i) + aeaa(i)
      &                 + aeopb(i) + aeopd(i) + aeid(i) + aeit(i)
-     &                 + aet(i) + aept(i) + aebt(i) + aeat(i) + aett(i)
-     &                 + aev(i) + aec(i) + aecd(i) + aed(i) + aem(i)
-     &                 + aep(i) + aer(i) + aes(i) + aelf(i) + aeg(i)
-     &                 + aex(i)
+     &                 + aet(i) + aept(i) + aebt(i) + aett(i) + aev(i)
+     &                 + aec(i) + aecd(i) + aed(i) + aem(i) + aep(i)
+     &                 + aer(i) + aes(i) + aelf(i) + aeg(i) + aex(i)
       end do
 c
 c     check for an illegal value for the total energy

@@ -33,7 +33,7 @@ c
       include 'usage.i'
       integer i,j,k,m,nh
       integer ia,ib,ic
-      integer ja,jb,jc
+      integer ja,jb
       integer ilist,next
       real*8 rab,rbc,rac
       real*8 cosine
@@ -194,15 +194,11 @@ c
                         ilist = bndlist(j,i)
                         ia = ibnd(1,ilist)
                         ib = ibnd(2,ilist)
-                        ja = atomic(ia)
-                        jb = atomic(ib)
                         if (use(ia) .or. use(ib)) then
-                           if (ja.eq.1 .or. jb.eq.1) then
-                              nrat = nrat + 1
-                              irat(1,nrat) = ia
-                              irat(2,nrat) = ib
-                              krat(nrat) = bl(ilist)
-                           end if
+                           nrat = nrat + 1
+                           irat(1,nrat) = ia
+                           irat(2,nrat) = ib
+                           krat(nrat) = bl(ilist)
                         end if
                      end do
                      do j = 1, 2*n12(i)-3
@@ -210,10 +206,7 @@ c
                         ia = iang(1,ilist)
                         ib = iang(2,ilist)
                         ic = iang(3,ilist)
-                        ja = atomic(ia)
-                        jc = atomic(ic)
                         if (use(ia) .or. use(ib) .or. use(ic)) then
-                           if (ja.eq.1 .and. jc.eq.1) then
                            do m = 1, n12(ib)
                               if (i12(m,ib) .eq. ia) then
                                  rab = bl(bndlist(m,ib))
@@ -229,7 +222,6 @@ c
                            irat(2,nrat) = ic
                            krat(nrat) = rac
                            call chkangle (ia,ib,ic)
-                           end if
                         end if
                      end do
                   end if

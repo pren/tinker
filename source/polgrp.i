@@ -30,9 +30,9 @@ c
       integer maxp11,maxp12
       integer maxp13,maxp14
       parameter (maxp11=150)
-      parameter (maxp12=50)
-      parameter (maxp13=50)
-      parameter (maxp14=50)
+      parameter (maxp12=150)
+      parameter (maxp13=150)
+      parameter (maxp14=150)
       integer np11,ip11,np12,ip12
       integer np13,ip13,np14,ip14
       common /polgrp/ np11(maxatm),ip11(maxp11,maxatm),

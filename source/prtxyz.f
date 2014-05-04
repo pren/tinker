@@ -21,8 +21,6 @@ c
       include 'sizes.i'
       include 'atmtyp.i'
       include 'atoms.i'
-      include 'bound.i'
-      include 'boxes.i'
       include 'couple.i'
       include 'files.i'
       include 'inform.i'
@@ -82,13 +80,6 @@ c
       else
          fstr = '('//atmc//',2x,a)'
          write (ixyz,fstr(1:9))  n,title(1:ltitle)
-      end if
-c
-c     write out the periodic cell lengths and angles
-c
-      if (use_bounds) then
-         fstr = '(1x,6f'//crdc//'.'//digc//')'
-         write (ixyz,fstr)  xbox,ybox,zbox,alpha,beta,gamma
       end if
 c
 c     write out the coordinate line for each atom

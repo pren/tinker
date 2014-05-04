@@ -232,7 +232,8 @@ c
             call fatal
          end if
          call bigblock (na,nb,nc)
-         write (iout,230)  na,nb,nc,xbox,ybox,zbox
+         write (iout,230)  na,nb,nc,dble(na)*xbox,dble(nb)*ybox,
+     &                     dble(nc)*zbox
   230    format (/,' Dimensions of the',i3,' x',i3,' x',i3,
      &              ' Cell Block :',
      &           //,' New Cell Dimensions :       a    =',f10.4,
@@ -559,15 +560,14 @@ c     ##                                                         ##
 c     #############################################################
 c
 c
-c     "bigblock" replicates the coordinates of a single unit cell
-c     to give a larger unit cell as a block of repeated units
+c     "bigblock" replicates the coordinates of a single unit
+c     cell to give a larger block of repeated units
 c
 c
       subroutine bigblock (na,nb,nc)
       implicit none
       include 'sizes.i'
       include 'atoms.i'
-      include 'boxes.i'
       integer i,j,k
       integer ii,jj,nsym
       integer na,nb,nc
@@ -621,17 +621,6 @@ c
          end do
       end do
       n = nsym * n
-c
-c     update the cell dimensions and fractional coordinates
-c
-      xbox = xbox * dble(na)
-      ybox = ybox * dble(nb)
-      zbox = zbox * dble(nc)
-      do i = 1, n
-         x(i) = x(i) / dble(na)
-         y(i) = y(i) / dble(nb)
-         z(i) = z(i) / dble(nc)
-      end do
 c
 c     perform deallocation of some local arrays
 c

@@ -25,15 +25,18 @@ c
       include 'inform.i'
       include 'iounit.i'
       include 'neigh.i'
+c   JRA
+      include 'osrwi.i'
       include 'paths.i'
       include 'pme.i'
       include 'socket.i'
       include 'solute.i'
-      include 'tarray.i'
       include 'uprior.i'
       include 'usage.i'
       include 'usolve.i'
       include 'vibs.i'
+cXiao
+      include 'tarray.i'
 c
 c
 c     close any open socket used for external communication
@@ -68,8 +71,6 @@ c
       if (associated(elst))  deallocate (elst)
       if (associated(nulst))  deallocate (nulst)
       if (associated(ulst))  deallocate (ulst)
-      if (associated(tindex))  deallocate (tindex)
-      if (associated(tdipdip))  deallocate (tdipdip)
       if (associated(pc0))  deallocate (pc0)
       if (associated(pc1))  deallocate (pc1)
       if (associated(pvect))  deallocate (pvect)
@@ -92,6 +93,11 @@ c
       if (associated(phi))  deallocate (phi)
       if (associated(phik))  deallocate (phik)
       if (associated(pwork))  deallocate (pwork)
+cxiao zhu
+      if (associated(ta_dipdip))  deallocate (ta_dipdip)
+      if (associated(ta_dip_index))  deallocate (ta_dip_index)
+c JRA - deallocate recursionKernel
+      if (associated(recursionKernel)) deallocate (recursionKernel)
 c
 c     print a final status message before exiting TINKER
 c

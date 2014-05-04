@@ -5,19 +5,19 @@ c     ## COPYRIGHT (C) 2013 by Xiao Zhu, Pengyu Ren & Jay W. Ponder ##
 c     ##                     All Rights Reserved                    ##
 c     ################################################################
 c
-c     ##############################################################
-c     ##                                                          ##
-c     ##  tarray.i  --  storage of dipole-dipole matrix elements  ##
-c     ##                                                          ##
-c     ##############################################################
+c     ###############################################################
+c     ##                                                           ##
+c     ##  tarray.i  --  temporary array storage for saving calc    ##
+c     ##                                                           ##
+c     ###############################################################
 c
 c
-c     tdipdip    stored dipole-dipole matrix element values
-c     tindex     index into stored dipole-dipole matrix values
-c     ntpair     number of stored dipole-dipole matrix elements
+c     npair        total number of dipole-dipole within cutoff
+c     ta_dipdip    temporary array of dipole-dipole interaction field
+c     ta_dip_index temporary index array of dipole-dipole 
 c
 c
-      integer ntpair
-      integer, pointer :: tindex(:,:)
-      real*8, pointer :: tdipdip(:,:)
-      common /tarray/ tdipdip,tindex,ntpair
+      integer npair
+      integer, pointer :: ta_dip_index(:,:)
+      real*8, pointer :: ta_dipdip(:,:)
+      common /tarray/ npair,ta_dipdip,ta_dip_index

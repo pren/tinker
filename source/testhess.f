@@ -26,12 +26,9 @@ c
       include 'inform.i'
       include 'iounit.i'
       include 'usage.i'
-      integer i,j,k,m
-      integer ii,jj
-      integer ixyz,ihes
+      integer i,j,k,m,ii,jj,ihes
       integer index,maxnum
-      integer next,frame
-      integer freeunit
+      integer next,freeunit
       integer, allocatable :: hindex(:)
       integer, allocatable :: hinit(:,:)
       integer, allocatable :: hstop(:,:)
@@ -48,7 +45,6 @@ c
       logical identical
       character*1 answer
       character*1 axis(3)
-      character*120 xyzfile
       character*120 hessfile
       character*120 record
       character*120 string
@@ -158,16 +154,6 @@ c
          if (answer .eq. 'Y')  dofull = .true.
       end if
 c
-c     reopen the coordinates file and read the first structure
-c
-      frame = 0
-      ixyz = freeunit ()
-      xyzfile = filename
-      call suffix (xyzfile,'xyz','old')
-      open (unit=ixyz,file=xyzfile,status ='old')
-      rewind (unit=ixyz)
-      call readxyz (ixyz)
-c
 c     perform dynamic allocation of some local arrays
 c
       allocate (hindex(3*n*(3*n-1)/2))
@@ -179,317 +165,299 @@ c
       allocate (hdiag(3,n))
       if (n .le. maxnum)  allocate (nhess(3,n,3,n))
 c
-c     perform analysis for each successive coordinate structure
-c
-      do while (.not. abort)
-         frame = frame + 1
-         if (frame .gt. 1) then
-            write (iout,120)  frame
-  120       format (/,' Analysis for Archive Structure :',8x,i8)
-         end if
-c
 c     get the analytical Hessian matrix elements
 c
-         identical = .true.
-         if (doanalyt) then
-            if (verbose) then
-               write (iout,130)
-  130          format ()
-            end if
-            hesscut = 0.0d0
-            call hessian (h,hinit,hstop,hindex,hdiag)
-            call hessian (h,hinit,hstop,hindex,hdiag)
-            call hessian (h,hinit,hstop,hindex,hdiag)
-         end if
+      identical = .true.
+      if (doanalyt) then
+         hesscut = 0.0d0
+         call hessian (h,hinit,hstop,hindex,hdiag)
+         call hessian (h,hinit,hstop,hindex,hdiag)
+         call hessian (h,hinit,hstop,hindex,hdiag)
+      end if
 c
 c     get the two-sided numerical Hessian matrix elements
 c
-         do i = 1, n
-            if (donumer .and. use(i)) then
-               old = x(i)
-               x(i) = x(i) - 0.5d0*eps
-               if (dograd) then
-                  call gradient (e,g)
-               else
-                  call numgrad (energy,g,eps)
-               end if
-               do k = 1, n
-                  do j = 1, 3
-                     g0(j,k) = g(j,k)
-                  end do
-               end do
-               x(i) = x(i) + eps
-               if (dograd) then
-                  call gradient (e,g)
-               else
-                  call numgrad (energy,g,eps)
-               end if
-               x(i) = old
-               do k = 1, n
-                  do j = 1, 3
-                     nhess(j,k,1,i) = (g(j,k) - g0(j,k)) / eps
-                  end do
-               end do
-               old = y(i)
-               y(i) = y(i) - 0.5d0*eps
-               if (dograd) then
-                  call gradient (e,g)
-               else
-                  call numgrad (energy,g,eps)
-               end if
-               do k = 1, n
-                  do j = 1, 3
-                     g0(j,k) = g(j,k)
-                  end do
-               end do
-               y(i) = y(i) + eps
-               if (dograd) then
-                  call gradient (e,g)
-               else
-                  call numgrad (energy,g,eps)
-               end if
-               y(i) = old
-               do k = 1, n
-                  do j = 1, 3
-                     nhess(j,k,2,i) = (g(j,k) - g0(j,k)) / eps
-                  end do
-               end do
-               old = z(i)
-               z(i) = z(i) - 0.5d0*eps
-               if (dograd) then
-                  call gradient (e,g)
-               else
-                  call numgrad (energy,g,eps)
-               end if
-               do k = 1, n
-                  do j = 1, 3
-                     g0(j,k) = g(j,k)
-                  end do
-               end do
-               z(i) = z(i) + eps
-               if (dograd) then
-                  call gradient (e,g)
-               else
-                  call numgrad (energy,g,eps)
-               end if
-               z(i) = old
-               do k = 1, n
-                  do j = 1, 3
-                     nhess(j,k,3,i) = (g(j,k) - g0(j,k)) / eps
-                  end do
-               end do
+      do i = 1, n
+         if (donumer .and. use(i)) then
+            old = x(i)
+            x(i) = x(i) - 0.5d0*eps
+            if (dograd) then
+               call gradient (e,g)
+            else
+               call numgrad (energy,g,eps)
             end if
+            do k = 1, n
+               do j = 1, 3
+                  g0(j,k) = g(j,k)
+               end do
+            end do
+            x(i) = x(i) + eps
+            if (dograd) then
+               call gradient (e,g)
+            else
+               call numgrad (energy,g,eps)
+            end if
+            x(i) = old
+            do k = 1, n
+               do j = 1, 3
+                  nhess(j,k,1,i) = (g(j,k) - g0(j,k)) / eps
+               end do
+            end do
+            old = y(i)
+            y(i) = y(i) - 0.5d0*eps
+            if (dograd) then
+               call gradient (e,g)
+            else
+               call numgrad (energy,g,eps)
+            end if
+            do k = 1, n
+               do j = 1, 3
+                  g0(j,k) = g(j,k)
+               end do
+            end do
+            y(i) = y(i) + eps
+            if (dograd) then
+               call gradient (e,g)
+            else
+               call numgrad (energy,g,eps)
+            end if
+            y(i) = old
+            do k = 1, n
+               do j = 1, 3
+                  nhess(j,k,2,i) = (g(j,k) - g0(j,k)) / eps
+               end do
+            end do
+            old = z(i)
+            z(i) = z(i) - 0.5d0*eps
+            if (dograd) then
+               call gradient (e,g)
+            else
+               call numgrad (energy,g,eps)
+            end if
+            do k = 1, n
+               do j = 1, 3
+                  g0(j,k) = g(j,k)
+               end do
+            end do
+            z(i) = z(i) + eps
+            if (dograd) then
+               call gradient (e,g)
+            else
+               call numgrad (energy,g,eps)
+            end if
+            z(i) = old
+            do k = 1, n
+               do j = 1, 3
+                  nhess(j,k,3,i) = (g(j,k) - g0(j,k)) / eps
+               end do
+            end do
+         end if
 c
 c     compare the analytical and numerical diagonal elements
 c
-            if (doanalyt .and. donumer) then
-               do j = 1, 3
-                  diff = abs(hdiag(j,i)-nhess(j,i,j,i))
-                  if (diff .gt. delta) then
-                     if (identical) then
-                        identical = .false.
-                        write (iout,140)
-  140                   format (/,' Comparison of Analytical and',
-     &                             ' Numerical Hessian Elements :',
-     &                          //,3x,'1st Atom',4x,'2nd Atom',
-     &                             9x,'Analytical',8x,'Numerical',
-     &                             7x,'Difference',/)
-                     end if
-                     if (digits .ge. 8) then
-                        write (iout,150)  i,axis(j),i,axis(j),
-     &                                    hdiag(j,i),nhess(j,i,j,i),
-     &                                    hdiag(j,i)-nhess(j,i,j,i)
-  150                   format (1x,i6,' (',a1,') ',1x,i6,' (',
-     &                             a1,') ',1x,3f17.8)
-                     else if (digits .ge. 6) then
-                        write (iout,160)  i,axis(j),i,axis(j),
-     &                                    hdiag(j,i),nhess(j,i,j,i),
-     &                                    hdiag(j,i)-nhess(j,i,j,i)
-  160                   format (1x,i6,' (',a1,') ',1x,i6,' (',
-     &                             a1,') ',1x,3f17.6)
-                     else
-                        write (iout,170)  i,axis(j),i,axis(j),
-     &                                    hdiag(j,i),nhess(j,i,j,i),
-     &                                    hdiag(j,i)-nhess(j,i,j,i)
-  170                   format (1x,i6,' (',a1,') ',1x,i6,' (',
-     &                             a1,') ',1x,3f17.4)
-                     end if
+         if (doanalyt .and. donumer) then
+            do j = 1, 3
+               diff = abs(hdiag(j,i)-nhess(j,i,j,i))
+               if (diff .gt. delta) then
+                  if (identical) then
+                     identical = .false.
+                     write (iout,120)
+  120                format (/,' Comparison of Analytical and',
+     &                         ' Numerical Hessian Elements :',
+     &                       //,3x,'1st Atom',4x,'2nd Atom',
+     &                         10x,'Analytical',8x,'Numerical',
+     &                         6x,'Difference',/)
                   end if
+                  if (digits .ge. 8) then
+                     write (iout,130)  i,axis(j),i,axis(j),
+     &                                 hdiag(j,i),nhess(j,i,j,i),
+     &                                 hdiag(j,i)-nhess(j,i,j,i)
+  130                format (1x,i6,' (',a1,') ',1x,i6,' (', a1,') ',
+     &                          2x,2f17.8,f16.8)
+                  else if (digits .ge. 6) then
+                     write (iout,140)  i,axis(j),i,axis(j),
+     &                                 hdiag(j,i),nhess(j,i,j,i),
+     &                                 hdiag(j,i)-nhess(j,i,j,i)
+  140                format (1x,i6,' (',a1,') ',1x,i6,' (', a1,') ',
+     &                          2x,2f17.6,f16.6)
+                  else
+                     write (iout,150)  i,axis(j),i,axis(j),
+     &                                 hdiag(j,i),nhess(j,i,j,i),
+     &                                 hdiag(j,i)-nhess(j,i,j,i)
+  150                format (1x,i6,' (',a1,') ',1x,i6,' (', a1,') ',
+     &                          2x,2f17.4,f16.4)
+                  end if
+               end if
 c
 c     compare the analytical and numerical off-diagonal elements
 c
-                  do k = hinit(j,i), hstop(j,i)
-                     index = hindex(k)
-                     jj = mod(index,3)
-                     if (jj .eq. 0)  jj = 3
-                     ii = (index+2) / 3
-                     diff = abs(h(k)-nhess(jj,ii,j,i))
-                     if (diff .gt. delta) then
-                        if (identical) then
-                           identical = .false.
-                           write (iout,180)
-  180                      format (/,' Comparison of Analytical and',
-     &                                ' Numerical Hessian Elements :',
-     &                             //,3x,'1st Atom',4x,'2nd Atom',
-     &                                9x,'Analytical',8x,'Numerical',
-     &                                7x,'Difference',/)
-                        end if
-                        if (digits .ge. 8) then
-                           write (iout,190)  i,axis(j),ii,axis(jj),
-     &                                       h(k),nhess(jj,ii,j,i),
-     &                                       h(k)-nhess(jj,ii,j,i)
-  190                      format (1x,i6,' (',a1,') ',1x,i6,' (',
-     &                                a1,') ',1x,3f17.8)
-                        else if (digits .ge. 6) then
-                           write (iout,200)  i,axis(j),ii,axis(jj),
-     &                                       h(k),nhess(jj,ii,j,i),
-     &                                       h(k)-nhess(jj,ii,j,i)
-  200                      format (1x,i6,' (',a1,') ',1x,i6,' (',
-     &                                a1,') ',1x,3f17.6)
-                        else
-                           write (iout,210)  i,axis(j),ii,axis(jj),
-     &                                       h(k),nhess(jj,ii,j,i),
-     &                                       h(k)-nhess(jj,ii,j,i)
-  210                      format (1x,i6,' (',a1,') ',1x,i6,' (',
-     &                                a1,') ',1x,3f17.4)
-                        end if
+               do k = hinit(j,i), hstop(j,i)
+                  index = hindex(k)
+                  jj = mod(index,3)
+                  if (jj .eq. 0)  jj = 3
+                  ii = (index+2) / 3
+                  diff = abs(h(k)-nhess(jj,ii,j,i))
+                  if (diff .gt. delta) then
+                     if (identical) then
+                        identical = .false.
+                        write (iout,160)
+  160                   format (/,' Comparison of Analytical and',
+     &                            ' Numerical Hessian Elements :',
+     &                          //,3x,'1st Atom',4x,'2nd Atom',
+     &                            10x,'Analytical',8x,'Numerical',
+     &                            6x,'Difference',/)
                      end if
-                  end do
-               end do
-            end if
-         end do
-c
-c     success if the analytical and numerical elements are the same
-c
-         if (doanalyt .and. donumer) then
-            if (identical) then
-               write (iout,220)
-  220          format (/,' Analytical and Numerical Hessian Elements',
-     &                    ' are Identical')
-            end if
-         end if
-c
-c     write out the diagonal Hessian elements for each atom
-c
-         if (doanalyt) then
-            if (digits .ge. 8) then
-               write (iout,230)
-  230          format (/,' Diagonal Hessian Elements for Each Atom :',
-     &                    //,6x,'Atom',21x,'X',19x,'Y',19x,'Z',/)
-            else if (digits .ge. 6) then
-               write (iout,240)
-  240          format (/,' Diagonal Hessian Elements for Each Atom :',
-     &                    //,6x,'Atom',19x,'X',17x,'Y',17x,'Z',/)
-            else
-               write (iout,250)
-  250          format (/,' Diagonal Hessian Elements for Each Atom :',
-     &                    //,6x,'Atom',17x,'X',15x,'Y',15x,'Z',/)
-            end if
-            do i = 1, n
-               if (digits .ge. 8) then
-                  write (iout,260)  i,(hdiag(j,i),j=1,3)
-  260             format (i10,5x,3f20.8)
-               else if (digits .ge. 6) then
-                  write (iout,270)  i,(hdiag(j,i),j=1,3)
-  270             format (i10,5x,3f18.6)
-               else
-                  write (iout,280)  i,(hdiag(j,i),j=1,3)
-  280             format (i10,5x,3f16.4)
-               end if
-            end do
-         end if
-c
-c     write out the Hessian trace as sum of diagonal elements
-c
-         if (doanalyt) then
-            sum = 0.0d0
-            do i = 1, n
-               do j = 1, 3
-                  sum = sum + hdiag(j,i)
-               end do
-            end do
-            if (digits .ge. 8) then
-               write (iout,290)  sum
-  290          format (/,' Sum of Diagonal Hessian Elements :',6x,f20.8)
-            else if (digits .ge. 6) then
-               write (iout,300)  sum
-  300          format (/,' Sum of Diagonal Hessian Elements :',6x,f18.6)
-            else
-               write (iout,310)  sum
-  310          format (/,' Sum of Diagonal Hessian Elements :',6x,f16.4)
-            end if
-         end if
-c
-c     write out the full matrix of numerical Hessian elements
-c
-         if (dofull .and. donumer) then
-            do i = 1, n
-               do k = 1, n
-                  write (iout,320)  i,k
-  320             format (/,' 3x3 Hessian Block for Atoms :',3x,2i8,/)
-                  do j = 1, 3
                      if (digits .ge. 8) then
-                        write (iout,330)  (nhess(m,i,j,k),m=1,3)
-  330                   format (' Numer',5x,3f20.8)
+                        write (iout,170)  i,axis(j),ii,axis(jj),
+     &                                    h(k),nhess(jj,ii,j,i),
+     &                                    h(k)-nhess(jj,ii,j,i)
+  170                   format (1x,i6,' (',a1,') ',1x,i6,' (', a1,') ',
+     &                             2x,2f17.8,f16.8)
                      else if (digits .ge. 6) then
-                        write (iout,340)  (nhess(m,i,j,k),m=1,3)
-  340                   format (' Numer',5x,3f18.6)
+                        write (iout,180)  i,axis(j),ii,axis(jj),
+     &                                    h(k),nhess(jj,ii,j,i),
+     &                                    h(k)-nhess(jj,ii,j,i)
+  180                   format (1x,i6,' (',a1,') ',1x,i6,' (', a1,') ',
+     &                             2x,2f17.6,f16.6)
                      else
-                        write (iout,350)  (nhess(m,i,j,k),m=1,3)
-  350                   format (' Numer',5x,3f16.4)
-                     end if
-                  end do
-               end do
-            end do
-         end if
-c
-c     write out the full matrix of analytical Hessian elements
-c
-         if (doanalyt .and. .not.donumer) then
-            ihes = freeunit ()
-            hessfile = filename(1:leng)//'.hes'
-            call version (hessfile,'new')
-            open (unit=ihes,file=hessfile,status='new')
-            write (iout,360)  hessfile
-  360       format (/,' Hessian Matrix written to File :  ',a40)
-            write (ihes,370)
-  370       format (/,' Diagonal Hessian Elements  (3 per Atom)',/)
-            if (digits .ge. 8) then
-               write (ihes,380)  ((hdiag(j,i),j=1,3),i=1,n)
-  380          format (4f16.8)
-            else if (digits .ge. 6) then
-               write (ihes,390)  ((hdiag(j,i),j=1,3),i=1,n)
-  390          format (5f14.6)
-            else
-               write (ihes,400)  ((hdiag(j,i),j=1,3),i=1,n)
-  400          format (6f12.4)
-            end if
-            do i = 1, n
-               do j = 1, 3
-                  if (hinit(j,i) .le. hstop(j,i)) then
-                     write (ihes,410)  i,axis(j)
-  410                format (/,' Off-diagonal Hessian Elements for Atom'
-     &,                         i6,1x,a1,/)
-                     if (digits .ge. 8) then
-                        write (ihes,420)  (h(k),k=hinit(j,i),hstop(j,i))
-  420                   format (4f16.8)
-                     else if (digits .ge. 6) then
-                        write (ihes,430)  (h(k),k=hinit(j,i),hstop(j,i))
-  430                   format (5f14.6)
-                     else
-                        write (ihes,440)  (h(k),k=hinit(j,i),hstop(j,i))
-  440                   format (6f12.4)
+                        write (iout,190)  i,axis(j),ii,axis(jj),
+     &                                    h(k),nhess(jj,ii,j,i),
+     &                                    h(k)-nhess(jj,ii,j,i)
+  190                   format (1x,i6,' (',a1,') ',1x,i6,' (', a1,') ',
+     &                             2x,2f17.4,f16.4)
                      end if
                   end if
                end do
             end do
-            close (unit=ihes)
          end if
-c
-c     attempt to read next structure from the coordinate file
-c
-         call readxyz (ixyz)
       end do
+c
+c     success if the analytical and numerical elements are the same
+c
+      if (doanalyt .and. donumer) then
+         if (identical) then
+            write (iout,200)
+  200       format (/,' Analytical and Numerical Hessian Elements',
+     &                 ' are Identical')
+         end if
+      end if
+c
+c     write out the diagonal Hessian elements for each atom
+c
+      if (doanalyt) then
+         if (digits .ge. 8) then
+            write (iout,210)
+  210       format (/,' Diagonal Hessian Elements for Each Atom :',
+     &              //,6x,'Atom',21x,'X',19x,'Y',19x,'Z',/)
+         else if (digits .ge. 6) then
+            write (iout,220)
+  220       format (/,' Diagonal Hessian Elements for Each Atom :',
+     &              //,6x,'Atom',19x,'X',17x,'Y',17x,'Z',/)
+         else
+            write (iout,230)
+  230       format (/,' Diagonal Hessian Elements for Each Atom :',
+     &              //,6x,'Atom',17x,'X',15x,'Y',15x,'Z',/)
+         end if
+         do i = 1, n
+            if (digits .ge. 8) then
+               write (iout,240)  i,(hdiag(j,i),j=1,3)
+  240          format (i10,5x,3f20.8)
+            else if (digits .ge. 6) then
+               write (iout,250)  i,(hdiag(j,i),j=1,3)
+  250          format (i10,5x,3f18.6)
+            else
+               write (iout,260)  i,(hdiag(j,i),j=1,3)
+  260          format (i10,5x,3f16.4)
+            end if
+         end do
+      end if
+c
+c     write out the Hessian trace as sum of diagonal elements
+c
+      if (doanalyt) then
+         sum = 0.0d0
+         do i = 1, n
+            do j = 1, 3
+               sum = sum + hdiag(j,i)
+            end do
+         end do
+         if (digits .ge. 8) then
+            write (iout,270)  sum
+  270       format (/,' Sum of Diagonal Hessian Elements :',6x,f20.8)
+         else if (digits .ge. 6) then
+            write (iout,280)  sum
+  280       format (/,' Sum of Diagonal Hessian Elements :',6x,f18.6)
+         else
+            write (iout,290)  sum
+  290       format (/,' Sum of Diagonal Hessian Elements :',6x,f16.4)
+         end if
+      end if
+c
+c     write out the full matrix of numerical Hessian elements
+c
+      if (dofull .and. donumer) then
+         do i = 1, n
+            do k = 1, n
+               write (iout,300)  i,k
+  300          format (/,' 3x3 Hessian Block for Atoms :',3x,2i8,/)
+               do j = 1, 3
+                  if (digits .ge. 8) then
+                     write (iout,310)  (nhess(m,i,j,k),m=1,3)
+  310                format (' Numer',5x,3f20.8)
+                  else if (digits .ge. 6) then
+                     write (iout,320)  (nhess(m,i,j,k),m=1,3)
+  320                format (' Numer',5x,3f18.6)
+                  else
+                     write (iout,330)  (nhess(m,i,j,k),m=1,3)
+  330                format (' Numer',5x,3f16.4)
+                  end if
+               end do
+            end do
+         end do
+      end if
+c
+c     write out the full matrix of analytical Hessian elements
+c
+      if (doanalyt .and. .not.donumer) then
+         ihes = freeunit ()
+         hessfile = filename(1:leng)//'.hes'
+         call version (hessfile,'new')
+         open (unit=ihes,file=hessfile,status='new')
+         write (iout,340)  hessfile
+  340    format (/,' Hessian Matrix written to File :  ',a40)
+         write (ihes,350)
+  350    format (/,' Diagonal Hessian Elements  (3 per Atom)',/)
+         if (digits .ge. 8) then
+            write (ihes,360)  ((hdiag(j,i),j=1,3),i=1,n)
+  360       format (4f16.8)
+         else if (digits .ge. 6) then
+            write (ihes,370)  ((hdiag(j,i),j=1,3),i=1,n)
+  370       format (5f14.6)
+         else
+            write (ihes,380)  ((hdiag(j,i),j=1,3),i=1,n)
+  380       format (6f12.4)
+         end if
+         do i = 1, n
+            do j = 1, 3
+               if (hinit(j,i) .le. hstop(j,i)) then
+                  write (ihes,390)  i,axis(j)
+  390             format (/,' Off-diagonal Hessian Elements for Atom',
+     &                       i6,1x,a1,/)
+                  if (digits .ge. 8) then
+                     write (ihes,400)  (h(k),k=hinit(j,i),hstop(j,i))
+  400                format (4f16.8)
+                  else if (digits .ge. 6) then
+                     write (ihes,410)  (h(k),k=hinit(j,i),hstop(j,i))
+  410                format (5f14.6)
+                  else
+                     write (ihes,420)  (h(k),k=hinit(j,i),hstop(j,i))
+  420                format (6f12.4)
+                  end if
+               end if
+            end do
+         end do
+         close (unit=ihes)
+      end if
 c
 c     perform deallocation of some local arrays
 c

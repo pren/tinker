@@ -702,7 +702,7 @@ c
 !$OMP& use_group,off2,radmin,epsilon,radmin4,epsilon4,
 !$OMP& cut2,c0,c1,c2,c3,c4,c5) firstprivate(vscale,iv14)
 !$OMP& shared(evt)
-!$OMP DO reduction(+:evt) schedule(guided)
+!$OMP DO reduction(+:evt) schedule(dynamic)
 c
 c     find the van der Waals energy via neighbor list search
 c

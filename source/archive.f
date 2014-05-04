@@ -21,7 +21,7 @@ c
       implicit none
       include 'sizes.i'
       include 'atoms.i'
-      include 'bound.i'
+      include 'boxes.i'
       include 'files.i'
       include 'inform.i'
       include 'iounit.i'
@@ -120,7 +120,6 @@ c
          rewind (unit=iarc)
          call readxyz (iarc)
          rewind (unit=iarc)
-         call active
       end if
 c
 c     combine individual files into a single archive file
@@ -182,11 +181,13 @@ c
                rewind (unit=ixyz)
                call readxyz (ixyz)
                close (unit=ixyz)
-               if (i .eq. start)  call active
-               nuse = n
-               do j = 1, n
-                  use(j) = .true.
-               end do
+               if (i .eq. start) then
+                  call active
+                  nuse = n
+                  do k = 1, nuse
+                     use(k) = .true.
+                  end do
+               end if
                call prtarc (iarc)
             end if
             i = i + step
@@ -229,18 +230,21 @@ c
                end if
             end do
          end if
+      else if (modtyp .eq. 'EXTRACT') then
+         call active
+         nuse = n
+         do i = 1, nuse
+            use(i) = .true.
+         end do
+      else if (modtyp .eq. 'UNFOLD') then
+         call active
+         nuse = n
+         do i = 1, nuse
+            use(i) = .true.
+         end do
+         call unitcell
+         call lattice
       end if
-c
-c     store index to use in renumbering the untrimmed atoms
-c
-      k = 0
-      do i = 1, n
-         iuse(i) = 0
-         if (use(i)) then
-            k = k + 1
-            iuse(i) = k
-         end if
-      end do
 c
 c     perform dynamic allocation of some local arrays
 c
@@ -307,10 +311,6 @@ c
                   call numeral (i,ext,lext)
                   call readxyz (iarc)
                   if (abort)  goto 210
-                  nuse = n
-                  do j = 1, n
-                     use(j) = .true.
-                  end do
                   ixyz = freeunit ()
                   xyzfile = filename(1:leng)//'.'//ext(1:lext)
                   call version (xyzfile,'new')
@@ -331,24 +331,18 @@ c
                   call readxyz (iarc)
                   if (abort)  goto 210
                   if (modtyp .eq. 'UNFOLD') then
-                     nuse = n
-                     do j = 1, n
-                        use(j) = .true.
-                     end do
                      if (i .eq. start) then
-                        call unitcell
                         do j = 1, n
                            xold(j) = x(j)
                            yold(j) = y(j)
                            zold(j) = z(j)
                         end do
                      end if
-                     call lattice
                      do j = 1, n
                         xr = x(j) - xold(j)
                         yr = y(j) - yold(j)
                         zr = z(j) - zold(j)
-                        if (use_bounds)  call image (xr,yr,zr)
+                        call image (xr,yr,zr)
                         x(j) = xold(j) + xr
                         y(j) = yold(j) + yr
                         z(j) = zold(j) + zr
@@ -424,8 +418,6 @@ c
       include 'sizes.i'
       include 'atmtyp.i'
       include 'atoms.i'
-      include 'bound.i'
-      include 'boxes.i'
       include 'couple.i'
       include 'files.i'
       include 'inform.i'
@@ -488,21 +480,14 @@ c
          write (iarc,fstr(1:9))  nuse,title(1:ltitle)
       end if
 c
-c     write out the periodic cell lengths and angles
-c
-      if (use_bounds) then
-         fstr = '(1x,6f'//crdc//'.'//digc//')'
-         write (iarc,fstr)  xbox,ybox,zbox,alpha,beta,gamma
-      end if
-c
 c     write out the coordinate line for each atom
 c
       fstr = '('//atmc//',2x,a3,3f'//crdc//
      &          '.'//digc//',i6,8'//atmc//')'
       do i = 1, n
          if (use(i)) then
-            write (iarc,fstr)  iuse(i),name(i),x(i),y(i),z(i),type(i),
-     &                         (iuse(i12(k,i)),k=1,n12(i))
+            write (iarc,fstr)  i,name(i),x(i),y(i),z(i),type(i),
+     &                         (i12(k,i),k=1,n12(i))
          end if
       end do
 c

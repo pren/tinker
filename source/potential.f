@@ -37,9 +37,8 @@ c
       integer i,j,k
       integer ixyz,ipot
       integer igrd,icub
-      integer next,mode
-      integer nmax,nvar
-      integer nmodel
+      integer next,mode,nmax
+      integer nmodel,nvar
       integer nglist,nflist
       integer freeunit
       integer trimtext
@@ -584,7 +583,7 @@ c
 c
 c     perform dynamic allocation of some local arrays
 c
-      allocate (xx(12*nmax))
+      allocate (xx(nvar))
 c
 c     set parameters, run optimization, get final parameters
 c

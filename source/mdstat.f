@@ -117,18 +117,10 @@ c
       if (modstep .eq. 0) then
          pico = dble(istep) * dt
          write (iout,50)  iprint,istep
-   50    format (/,' Average Values for the Last',i6,' Out of',
+   50    format (/,' Average Values for the last',i6,' out of',
      &              i9,' Dynamics Steps')
-         if (digits .ge. 8) then
-            write (iout,60)  pico
-   60       format (/,' Simulation Time',5x,f19.8,' Picosecond')
-         else if (digits .ge. 6) then
-            write (iout,70)  pico
-   70       format (/,' Simulation Time',5x,f17.6,' Picosecond')
-         else
-            write (iout,80)  pico
-   80       format (/,' Simulation Time',5x,f15.4,' Picosecond')
-         end if
+         write (iout,60)  pico
+   60    format (/,' Simulation Time',5x,f15.4,' Picosecond')
       end if
 c
 c     compute total energy and fluctuation for recent steps
@@ -144,19 +136,9 @@ c
          else
             fluctuate = 0.0d0
          end if
-         if (digits .ge. 8) then
-            write (iout,90)  etot_ave,fluctuate
-   90       format (' Total Energy',8x,f19.8,' Kcal/mole',3x,
-     &                 '(+/-',f13.8,')')
-         else if (digits .ge. 6) then
-            write (iout,100)  etot_ave,fluctuate
-  100       format (' Total Energy',8x,f17.6,' Kcal/mole',3x,
-     &                 '(+/-',f11.6,')')
-         else
-            write (iout,110)  etot_ave,fluctuate
-  110       format (' Total Energy',8x,f15.4,' Kcal/mole',3x,
-     &                 '(+/-',f9.4,')')
-         end if
+         write (iout,70)  etot_ave,fluctuate
+   70    format (' Total Energy',8x,f15.4,' Kcal/mole',3x,
+     &              '(+/-',f9.4,')')
       end if
 c
 c     compute average potential energy and its fluctuation
@@ -172,19 +154,9 @@ c
          else
             potfluct = 0.0d0
          end if
-         if (digits .ge. 8) then
-            write (iout,120)  epot_ave,potfluct
-  120       format (' Potential Energy',4x,f19.8,' Kcal/mole',3x,
-     &                 '(+/-',f13.8,')')
-         else if (digits .ge. 6) then
-            write (iout,130)  epot_ave,potfluct
-  130       format (' Potential Energy',4x,f17.6,' Kcal/mole',3x,
-     &                 '(+/-',f11.6,')')
-         else
-            write (iout,140)  epot_ave,potfluct
-  140       format (' Potential Energy',4x,f15.4,' Kcal/mole',3x,
-     &                 '(+/-',f9.4,')')
-         end if
+         write (iout,80)  epot_ave,potfluct
+   80    format (' Potential Energy',4x,f15.4,' Kcal/mole',3x,
+     &              '(+/-',f9.4,')')
       end if
 c
 c     compute average kinetic energy and its fluctuation
@@ -200,19 +172,9 @@ c
          else
             kinfluct = 0.0d0
          end if
-         if (digits .ge. 8) then
-            write (iout,150)  ekin_ave,kinfluct
-  150       format (' Kinetic Energy',6x,f19.8,' Kcal/mole',3x,
-     &                 '(+/-',f13.8,')')
-         else if (digits .ge. 6) then
-            write (iout,160)  ekin_ave,kinfluct
-  160       format (' Kinetic Energy',6x,f17.6,' Kcal/mole',3x,
-     &                 '(+/-',f11.6,')')
-         else
-            write (iout,170)  ekin_ave,kinfluct
-  170       format (' Kinetic Energy',6x,f15.4,' Kcal/mole',3x,
-     &                 '(+/-',f9.4,')')
-         end if
+         write (iout,90)  ekin_ave,kinfluct
+   90    format (' Kinetic Energy',6x,f15.4,' Kcal/mole',3x,
+     &              '(+/-',f9.4,')')
       end if
 c
 c     compute average intermolecular energy and its fluctuation
@@ -229,19 +191,9 @@ c
             else
                intfluct = 0.0d0
             end if
-            if (digits .ge. 8) then
-               write (iout,180)  eint_ave,intfluct
-  180          format (' Intermolecular',6x,f19.8,' Kcal/mole',3x,
-     &                    '(+/-',f13.8,')')
-            else if (digits .ge. 6) then
-               write (iout,190)  eint_ave,intfluct
-  190          format (' Intermolecular',6x,f17.6,' Kcal/mole',3x,
-     &                    '(+/-',f11.6,')')
-            else
-               write (iout,200)  eint_ave,intfluct
-  200          format (' Intermolecular',6x,f15.4,' Kcal/mole',3x,
-     &                    '(+/-',f9.4,')')
-            end if
+            write (iout,100)  eint_ave,intfluct
+  100       format (' Intermolecular',6x,f15.4,' Kcal/mole',3x,
+     &                 '(+/-',f9.4,')')
          end if
       end if
 c
@@ -258,19 +210,9 @@ c
          else
             tfluct = 0.0d0
          end if
-         if (digits .ge. 8) then
-            write (iout,210)  temp_ave,tfluct
-  210       format (' Temperature',9x,f19.6,' Kelvin',6x,
-     &                 '(+/-',f13.6,')')
-         else if (digits .ge. 6) then
-            write (iout,220)  temp_ave,tfluct
-  220       format (' Temperature',9x,f17.4,' Kelvin',6x,
-     &                 '(+/-',f11.4,')')
-         else
-            write (iout,230)  temp_ave,tfluct
-  230       format (' Temperature',9x,f15.2,' Kelvin',6x,
-     &                 '(+/-',f9.2,')')
-         end if
+         write (iout,110)  temp_ave,tfluct
+  110    format (' Temperature',9x,f15.2,' Kelvin',6x,
+     &              '(+/-',f9.2,')')
       end if
 c
 c     compute the average pressure and its fluctuation
@@ -287,19 +229,9 @@ c
             else
                pfluct = 0.0d0
             end if
-            if (digits .ge. 8) then
-               write (iout,240)  pres_ave,pfluct
-  240          format (' Pressure',12x,f19.6,' Atmosphere',2x,
-     &                    '(+/-',f13.6,')')
-            else if (digits .ge. 6) then
-               write (iout,250)  pres_ave,pfluct
-  250          format (' Pressure',12x,f17.4,' Atmosphere',2x,
-     &                    '(+/-',f11.4,')')
-            else
-               write (iout,260)  pres_ave,pfluct
-  260          format (' Pressure',12x,f15.2,' Atmosphere',2x,
-     &                    '(+/-',f9.2,')')
-            end if
+            write (iout,120)  pres_ave,pfluct
+  120       format (' Pressure',12x,f15.2,' Atmosphere',2x,
+     &                 '(+/-',f9.2,')')
          end if
 c
 c     compute the average density and its fluctuation
@@ -316,36 +248,18 @@ c
             else
                dfluct = 0.0d0
             end if
-            if (digits .ge. 8) then
-               write (iout,270)  dens_ave,dfluct
-  270          format (' Density',13x,f19.8,' Grams/cc',4x,
-     &                    '(+/-',f13.8,')')
-            else if (digits .ge. 6) then
-               write (iout,280)  dens_ave,dfluct
-  280          format (' Density',13x,f17.6,' Grams/cc',4x,
-     &                    '(+/-',f11.6,')')
-            else
-               write (iout,290)  dens_ave,dfluct
-  290          format (' Density',13x,f15.4,' Grams/cc',4x,
-     &                    '(+/-',f9.4,')')
-            end if
+            write (iout,130)  dens_ave,dfluct
+  130       format (' Density',13x,f15.4,' Grams/cc',4x,
+     &                 '(+/-',f9.4,')')
          end if
       end if
 c
-c     declare deformation value for potential energy smoothing
+c     note deformation value for potential energy smoothing
 c
       if (use_smooth) then
          if (modstep .eq. 0) then
-            if (digits .ge. 8) then
-               write (iout,300)  deform
-  300          format (' Deformation',9x,f19.8,' Sqr Angs')
-            else if (digits .ge. 6) then
-               write (iout,310)  deform
-  310          format (' Deformation',9x,f17.6,' Sqr Angs')
-            else
-               write (iout,320)  deform
-  320          format (' Deformation',9x,f15.4,' Sqr Angs')
-            end if
+            write (iout,140)  deform
+  140       format (' Deformation',9x,f15.3,' Sqr Angs')
          end if
       end if
       return

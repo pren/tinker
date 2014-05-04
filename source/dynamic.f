@@ -28,6 +28,9 @@ c
       include 'iounit.i'
       include 'keys.i'
       include 'mdstuf.i'
+c     JRA - need to save time step and temp of system
+c           and start lambda particle propagation
+      include 'osrwi.i'
       include 'potent.i'
       include 'solute.i'
       include 'stodyn.i'
@@ -102,6 +105,12 @@ c
    70    continue
       end do
       dt = 0.001d0 * dt
+      
+c
+c     JRA saved dt value for alchemical/osrw simulations (ps)
+c      
+      dtosrw = dt
+      
 c
 c     enforce bounds on thermostat and barostat coupling times
 c
@@ -228,6 +237,10 @@ c
 c
 c     initialize any holonomic constraints and setup dynamics
 c
+c
+c     JRA save temperature for osrw
+c
+      tempsystem = kelvin
       call shakeup
       call mdinit
 c
@@ -269,6 +282,10 @@ c
 c
 c     integrate equations of motion to take a time step
 c
+c
+c      JRA begin propagation of lambda particle
+c
+      propagateLambda = .true.
       do istep = 1, nstep
          if (integrate .eq. 'VERLET') then
             call verlet (istep,dt)

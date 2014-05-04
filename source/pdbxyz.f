@@ -29,11 +29,9 @@ c
       include 'pdb.i'
       include 'resdue.i'
       include 'sequen.i'
-      include 'titles.i'
       integer i,j,it,next
       integer ipdb,ixyz,iseq
-      integer last,pdbleng
-      integer freeunit
+      integer last,freeunit
       integer, allocatable :: size(:)
       real*8 xi,yi,zi,rij
       real*8 rcut,rmax(0:9)
@@ -45,7 +43,6 @@ c
       character*120 pdbfile
       character*120 xyzfile
       character*120 seqfile
-      character*120 pdbtitle
 c
 c
 c     get the Protein Data Bank file and a parameter set
@@ -53,14 +50,8 @@ c
       call initial
       call getpdb
       call field
-      call unitcell
 c
-c     save the title line from the PDB file for later use
-c
-      pdbleng = ltitle
-      pdbtitle = title(1:ltitle)
-c
-c     decide whether the system has only biopolymers and water
+c     decide whether the system contains only biopolymers
 c
       biopoly = .false.
       reslast = '***'
@@ -81,20 +72,13 @@ c
                      goto 10
                   end if
                end do
+               if (resname .eq. 'HOH') then
+                  pdbtyp(i) = 'HETATM'
+                  goto 10
+               end if
                biopoly = .false.
                goto 20
    10          continue
-            end if
-         else if (pdbtyp(i) .eq. 'HETATM') then
-            resname = resnam(i)
-            if (resname .ne. reslast) then
-               reslast = resname
-               if (resname.eq.'HOH' .or. resname.eq.'NA ' .or.
-     &             resname.eq.'K  ' .or. resname.eq.'MG ' .or.
-     &             resname.eq.'CA ' .or. resname.eq.'CL ') then
-                  biopoly = .true.
-                  pdbtyp(i) = 'HETATM'
-               end if
             end if
          end if
       end do
@@ -120,7 +104,6 @@ c     use special translation mechanisms used for biopolymers
 c
       do while (.not. abort)
          if (biopoly) then
-            n = 0
             do i = 1, nchain
                if (chntyp(i) .eq. 'PEPTIDE')  call ribosome (i)
                if (chntyp(i) .eq. 'NUCLEIC')  call ligase (i)
@@ -228,8 +211,6 @@ c
 c
 c     write the TINKER coordinates and reset the connectivities
 c
-         ltitle = pdbleng
-         title = pdbtitle(1:ltitle)
          call prtxyz (ixyz)
          do i = 1, n
             n12(i) = 0

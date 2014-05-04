@@ -14,7 +14,7 @@ c
 c
 c     maxnbt   maximum number of stretch-torsion parameter entries
 c
-c     btcon    torsional amplitude parameters for stretch-torsion
+c     btcon    force constant parameters for stretch-torsion
 c     kbt      string of atom classes for stretch-torsion terms
 c
 c
@@ -22,4 +22,4 @@ c
       parameter (maxnbt=500)
       real*8 btcon
       character*16 kbt
-      common /ksttor/ btcon(9,maxnbt),kbt(maxnbt)
+      common /ksttor/ btcon(3,maxnbt),kbt(maxnbt)

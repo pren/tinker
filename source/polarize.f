@@ -36,7 +36,6 @@ c
       real*8 dalpha(3)
       real*8 alpha(3,3)
       real*8 valpha(3,3)
-      character*40 fstr
 c
 c
 c     get the coordinates and required force field parameters
@@ -60,17 +59,12 @@ c
       do i = 1, npole
          addu = polarity(i) + addu
       end do
-      fstr = ' Additive Total Polarizability :    '
-      if (nmol .eq. 1)  fstr = ' Additive Molecular Polarizability :'
-      if (digits .ge. 8) then
-         write (iout,20)  fstr(1:36),addu
-   20    format (/,a36,f19.8)
-      else if (digits .ge. 6) then
-         write (iout,30)  fstr(1:36),addu
-   30    format (/,a36,f17.6)
+      if (nmol .eq. 1) then
+         write (iout,20)  addu
+   20    format (/,' Additive Molecular Polarizability :',f15.4)
       else
-         write (iout,40)  fstr(1:36),addu
-   40    format (/,a36,f15.4)
+         write (iout,30)  addu
+   30    format (/,' Additive Total Polarizability :',4x,f15.4)
       end if
 c
 c     compute each column of the polarizability tensor
@@ -103,60 +97,33 @@ c
 c
 c     print out the full polarizability tensor
 c
-      fstr = ' Total Polarizability Tensor :    '
-      if (nmol .eq. 1)  fstr = ' Molecular Polarizability Tensor :'
-      write (iout,50)  fstr(1:34)
-   50 format (/,a34,/)
-      if (digits .ge. 8) then
-         write (iout,60)  alpha(1,1),alpha(1,2),alpha(1,3),
-     &                    alpha(2,1),alpha(2,2),alpha(2,3),
-     &                    alpha(3,1),alpha(3,2),alpha(3,3)
-   60    format (15x,3f16.8,/,15x,3f16.8,/,15x,3f16.8)
-      else if (digits .ge. 6) then
-         write (iout,70)  alpha(1,1),alpha(1,2),alpha(1,3),
-     &                    alpha(2,1),alpha(2,2),alpha(2,3),
-     &                    alpha(3,1),alpha(3,2),alpha(3,3)
-   70    format (15x,3f14.6,/,15x,3f14.6,/,15x,3f14.6)
+      if (nmol .eq. 1) then
+         write (iout,40)
+   40    format (/,' Molecular Polarizability Tensor :',/)
       else
-         write (iout,80)  alpha(1,1),alpha(1,2),alpha(1,3),
-     &                    alpha(2,1),alpha(2,2),alpha(2,3),
-     &                    alpha(3,1),alpha(3,2),alpha(3,3)
-   80    format (15x,3f12.4,/,15x,3f12.4,/,15x,3f12.4)
+         write (iout,50)
+   50    format (/,' Total Polarizability Tensor:',/)
       end if
+      write (iout,60)  alpha(1,1),alpha(1,2),alpha(1,3),
+     &                 alpha(2,1),alpha(2,2),alpha(2,3),
+     &                 alpha(3,1),alpha(3,2),alpha(3,3)
+   60 format (15x,3f12.4,/,15x,3f12.4,/,15x,3f12.4)
 c
 c     diagonalize the tensor and get molecular polarizability
 c
       call jacobi (3,alpha,dalpha,valpha)
-      if (nmol .eq. 1)  fstr = ' Polarizability Tensor Eigenvalues :'
-      write (iout,90)  fstr(1:36)
-   90 format (/,a36,/)
-      if (digits .ge. 8) then
-         write (iout,100)  dalpha(1),dalpha(2),dalpha(3)
-  100    format (15x,3f16.8)
-      else if (digits .ge. 6) then
-         write (iout,110)  dalpha(1),dalpha(2),dalpha(3)
-  110    format (15x,3f14.6)
-      else
-         write (iout,120)  dalpha(1),dalpha(2),dalpha(3)
-  120    format (15x,3f12.4)
-      end if
+      write (iout,70)
+   70 format (/,' Polarizability Tensor Eigenvalues :',/)
+      write (iout,80)  dalpha(1),dalpha(2),dalpha(3)
+   80 format (15x,3f12.4)
       malpha = (dalpha(1)+dalpha(2)+dalpha(3)) / 3.0d0
-      fstr = ' Interactive Total Polarizability :    '
-      if (nmol .eq. 1)  fstr = ' Interactive Molecular Polarizability :'
-      if (digits .ge. 8) then
-         write (iout,130)  fstr(1:39),addu
-  130    format (/,a39,f16.8)
-      else if (digits .ge. 6) then
-         write (iout,140)  fstr(1:39),addu
-  140    format (/,a39,f14.6)
+      if (nmol .eq. 1) then
+         write (iout,90)  malpha
+   90    format (/,' Interactive Molecular Polarizability :',f12.4)
       else
-         write (iout,150)  fstr(1:39),addu
-  150    format (/,a39,f12.4)
+         write (iout,100)  malpha
+  100    format (/,' Interactive Total Polarizability :',4x,f12.4)
       end if
-c
-c     perform any final tasks before program exit
-c
-      call final
       end
 c
 c
@@ -194,6 +161,7 @@ c
       real*8, allocatable :: zrsd(:,:)
       real*8, allocatable :: conj(:,:)
       real*8, allocatable :: vec(:,:)
+      character*6 mode
       logical done
 c
 c

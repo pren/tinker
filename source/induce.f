@@ -286,6 +286,7 @@ c
          allocate (conjp(3,npole))
          allocate (vec(3,npole))
          allocate (vecp(3,npole))
+         
 c
 c     get the electrostatic field due to induced dipoles
 c
@@ -419,6 +420,8 @@ c
             if (eps .gt. epsold)  done = .true.
             if (iter .ge. politer)  done = .true.
          end do
+
+
 c
 c     perform deallocation of some local arrays
 c
@@ -468,7 +471,7 @@ c     ##                                                             ##
 c     #################################################################
 c
 c
-c     "dfield0a" computes the direct electrostatic field due to
+c     "dfield0a" computes the direct electricstatic field due to
 c     permanent multipole moments via a double loop
 c
 c
@@ -481,6 +484,7 @@ c
       include 'couple.i'
       include 'group.i'
       include 'mpole.i'
+      include 'mutant.i'
       include 'polar.i'
       include 'polgrp.i'
       include 'polpot.i'
@@ -491,12 +495,15 @@ c
       real*8 fgrp,r,r2
       real*8 rr3,rr5,rr7
       real*8 ci,dix,diy,diz
+      real*8 duix,duiy,duiz
       real*8 qixx,qixy,qixz
       real*8 qiyy,qiyz,qizz
       real*8 ck,dkx,dky,dkz
+      real*8 dukx,duky,dukz
       real*8 qkxx,qkxy,qkxz
       real*8 qkyy,qkyz,qkzz
-      real*8 dir,dkr
+      real*8 dir,duir
+      real*8 dkr,dukr
       real*8 qix,qiy,qiz,qir
       real*8 qkx,qky,qkz,qkr
       real*8 damp,expdamp
@@ -584,6 +591,10 @@ c
             kk = ipole(k)
             proceed = .true.
             if (use_intra)  call groups (proceed,fgrp,ii,kk,0,0,0,0)
+c           JRA change
+            if (osrwon .and. proceed) then
+              proceed = mut(ii) .and. mut(kk)
+            end if
             if (proceed) then
                xr = x(kk) - x(ii)
                yr = y(kk) - y(ii)
@@ -799,7 +810,7 @@ c     ##                                                             ##
 c     #################################################################
 c
 c
-c     "ufield0a" computes the mutual electrostatic field due to
+c     "ufield0a" computes the mutual electricstatic field due to
 c     induced dipole moments via a double loop
 c
 c
@@ -811,6 +822,7 @@ c
       include 'cell.i'
       include 'group.i'
       include 'mpole.i'
+      include 'mutant.i'
       include 'polar.i'
       include 'polgrp.i'
       include 'polpot.i'
@@ -819,7 +831,7 @@ c
       integer ii,kk
       real*8 xr,yr,zr
       real*8 fgrp,r,r2
-      real*8 rr3,rr5
+      real*8 rr3,rr5,rr7
       real*8 duix,duiy,duiz
       real*8 puix,puiy,puiz
       real*8 dukx,duky,dukz
@@ -828,6 +840,7 @@ c
       real*8 dukr,pukr
       real*8 damp,expdamp
       real*8 scale3,scale5
+      real*8 scale7
       real*8 pdi,pti,pgamma
       real*8 fid(3),fkd(3)
       real*8 fip(3),fkp(3)
@@ -887,6 +900,10 @@ c
             kk = ipole(k)
             proceed = .true.
             if (use_intra)  call groups (proceed,fgrp,ii,kk,0,0,0,0)
+c           JRA change
+            if (osrwon .and. proceed) then
+              proceed = mut(ii) .and. mut(kk)
+            end if
             if (proceed) then
                xr = x(kk) - x(ii)
                yr = y(kk) - y(ii)
@@ -1055,7 +1072,7 @@ c     ##                                                           ##
 c     ###############################################################
 c
 c
-c     "dfield0b" computes the mutual electrostatic field due to
+c     "dfield0b" computes the mutual electricstatic field due to
 c     permanent multipole moments via a pair list
 c
 c
@@ -1078,12 +1095,17 @@ c
       real*8 fgrp,r,r2
       real*8 rr3,rr5,rr7
       real*8 ci,dix,diy,diz
+      real*8 duix,duiy,duiz
+      real*8 puix,puiy,puiz
       real*8 qixx,qixy,qixz
       real*8 qiyy,qiyz,qizz
       real*8 ck,dkx,dky,dkz
+      real*8 dukx,duky,dukz
+      real*8 pukx,puky,pukz
       real*8 qkxx,qkxy,qkxz
       real*8 qkyy,qkyz,qkzz
-      real*8 dir,dkr
+      real*8 dir,duir,puir
+      real*8 dkr,dukr,pukr
       real*8 qix,qiy,qiz,qir
       real*8 qkx,qky,qkz,qkr
       real*8 damp,expdamp
@@ -1091,6 +1113,7 @@ c
       real*8 scale7
       real*8 pdi,pti,pgamma
       real*8 fid(3),fkd(3)
+      real*8 fip(3),fkp(3)
       real*8, allocatable :: dscale(:)
       real*8, allocatable :: pscale(:)
       real*8 field(3,*)
@@ -1255,7 +1278,7 @@ c     ##                                                           ##
 c     ###############################################################
 c
 c
-c     "ufield0b" computes the mutual electrostatic field due to
+c     "ufield0b" computes the mutual electricstatic field due to
 c     induced dipole moments via a pair list
 c
 c
@@ -1275,7 +1298,7 @@ c
       integer ii,kk,kkk
       real*8 xr,yr,zr
       real*8 fgrp,r,r2
-      real*8 rr3,rr5
+      real*8 rr3,rr5,rr7
       real*8 duix,duiy,duiz
       real*8 puix,puiy,puiz
       real*8 dukx,duky,dukz
@@ -1284,6 +1307,7 @@ c
       real*8 dukr,pukr
       real*8 damp,expdamp
       real*8 scale3,scale5
+      real*8 scale7
       real*8 pdi,pti,pgamma
       real*8 fid(3),fkd(3)
       real*8 fip(3),fkp(3)
@@ -1413,7 +1437,7 @@ c     ##                                                           ##
 c     ###############################################################
 c
 c
-c     "dfield0c" computes the mutual electrostatic field due to
+c     "dfield0c" computes the mutual electricstatic field due to
 c     permanent multipole moments via Ewald summation
 c
 c
@@ -1430,6 +1454,7 @@ c
       integer i,j,ii
       real*8 term
       real*8 ucell(3)
+      real*8 ucellp(3)
       real*8 field(3,*)
       real*8 fieldp(3,*)
 c
@@ -1501,7 +1526,7 @@ c     ##                                                           ##
 c     ###############################################################
 c
 c
-c     "ufield0c" computes the mutual electrostatic field due to
+c     "ufield0c" computes the mutual electricstatic field due to
 c     induced dipole moments via Ewald summation
 c
 c
@@ -1774,9 +1799,9 @@ c
       integer i,j,k,m
       integer ii,kk
       real*8 xr,yr,zr,r,r2
-      real*8 rr1,rr2,rr3
-      real*8 rr5,rr7
       real*8 erfc,bfac,exp2a
+      real*8 drr3,drr5,drr7
+      real*8 prr3,prr5,prr7
       real*8 ci,dix,diy,diz
       real*8 qixx,qiyy,qizz
       real*8 qixy,qixz,qiyz
@@ -1786,19 +1811,20 @@ c
       real*8 dir,dkr
       real*8 qix,qiy,qiz,qir
       real*8 qkx,qky,qkz,qkr
-      real*8 ralpha,aefac
-      real*8 aesq2,aesq2n
+      real*8 ralpha
+      real*8 alsq2,alsq2n
       real*8 pdi,pti,pgamma
       real*8 damp,expdamp
       real*8 scale3,scale5
       real*8 scale7
       real*8 dsc3,dsc5,dsc7
       real*8 psc3,psc5,psc7
-      real*8 bn(0:3),bcn(3)
-      real*8 fimd(3),fkmd(3)
-      real*8 fimp(3),fkmp(3)
-      real*8, allocatable :: pscale(:)
+      real*8 bn(0:3)
+      real*8 fim(3),fkm(3)
+      real*8 fid(3),fkd(3)
+      real*8 fip(3),fkp(3)
       real*8, allocatable :: dscale(:)
+      real*8, allocatable :: pscale(:)
       real*8 field(3,*)
       real*8 fieldp(3,*)
       character*6 mode
@@ -1810,20 +1836,17 @@ c
       if (npole .eq. 0)  return
       mode = 'EWALD'
       call switch (mode)
-      aesq2 = 2.0 * aewald * aewald
-      aesq2n = 0.0d0
-      if (aewald .gt. 0.0d0)  aesq2n = 1.0d0 / (sqrtpi*aewald)
 c
 c     perform dynamic allocation of some local arrays
 c
-      allocate (pscale(n))
       allocate (dscale(n))
+      allocate (pscale(n))
 c
 c     set arrays needed to scale connected atom interactions
 c
       do i = 1, n
-         pscale(i) = 1.0d0
          dscale(i) = 1.0d0
+         pscale(i) = 1.0d0
       end do
 c
 c     compute the real space portion of the Ewald summation
@@ -1879,11 +1902,6 @@ c
             r2 = xr*xr + yr* yr + zr*zr
             if (r2 .le. cut2) then
                r = sqrt(r2)
-               rr1 = 1.0d0 / r
-               rr2 = rr1 * rr1
-               rr3 = rr2 * rr1
-               rr5 = rr2 * rr3
-               rr7 = rr2 * rr5
                ck = rpole(1,k)
                dkx = rpole(2,k)
                dky = rpole(3,k)
@@ -1895,19 +1913,22 @@ c
                qkyz = rpole(10,k)
                qkzz = rpole(13,k)
 c
-c     calculate the error function damping factors
+c     calculate the error function damping terms
 c
                ralpha = aewald * r
-               bn(0) = erfc(ralpha) * rr1
+               bn(0) = erfc(ralpha) / r
+               alsq2 = 2.0d0 * aewald**2
+               alsq2n = 0.0d0
+               if (aewald .gt. 0.0d0)
+     &            alsq2n = 1.0d0 / (sqrtpi*aewald)
                exp2a = exp(-ralpha**2)
-               aefac = aesq2n
                do j = 1, 3
                   bfac = dble(j+j-1)
-                  aefac = aesq2 * aefac
-                  bn(j) = (bfac*bn(j-1)+aefac*exp2a) * rr2
+                  alsq2n = alsq2 * alsq2n
+                  bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) / r2
                end do
 c
-c     compute the polarization damping scale factors
+c     compute the error function scaled and unscaled terms
 c
                scale3 = 1.0d0
                scale5 = 1.0d0
@@ -1924,9 +1945,18 @@ c
      &                           *(1.0d0-damp+0.6d0*damp**2)
                   end if
                end if
-c
-c     find the field terms for the current interaction
-c
+               dsc3 = scale3 * dscale(kk)
+               dsc5 = scale5 * dscale(kk)
+               dsc7 = scale7 * dscale(kk)
+               psc3 = scale3 * pscale(kk)
+               psc5 = scale5 * pscale(kk)
+               psc7 = scale7 * pscale(kk)
+               drr3 = (1.0d0-dsc3) / (r*r2)
+               drr5 = 3.0d0 * (1.0d0-dsc5) / (r*r2*r2)
+               drr7 = 15.0d0 * (1.0d0-dsc7) / (r*r2*r2*r2)
+               prr3 = (1.0d0-psc3) / (r*r2)
+               prr5 = 3.0d0 * (1.0d0-psc5) / (r*r2*r2)
+               prr7 = 15.0d0 * (1.0d0-psc7) / (r*r2*r2*r2)
                dir = dix*xr + diy*yr + diz*zr
                qix = qixx*xr + qixy*yr + qixz*zr
                qiy = qixy*xr + qiyy*yr + qiyz*zr
@@ -1937,44 +1967,50 @@ c
                qky = qkxy*xr + qkyy*yr + qkyz*zr
                qkz = qkxz*xr + qkyz*yr + qkzz*zr
                qkr = qkx*xr + qky*yr + qkz*zr
-               bcn(1) = bn(1) - (1.0d0-scale3*dscale(kk))*rr3
-               bcn(2) = bn(2) - 3.0d0*(1.0d0-scale5*dscale(kk))*rr5
-               bcn(3) = bn(3) - 15.0d0*(1.0d0-scale7*dscale(kk))*rr7
-               fimd(1) = -xr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                     - bcn(1)*dkx + 2.0d0*bcn(2)*qkx
-               fimd(2) = -yr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                     - bcn(1)*dky + 2.0d0*bcn(2)*qky
-               fimd(3) = -zr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                     - bcn(1)*dkz + 2.0d0*bcn(2)*qkz
-               fkmd(1) = xr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                     - bcn(1)*dix - 2.0d0*bcn(2)*qix
-               fkmd(2) = yr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                     - bcn(1)*diy - 2.0d0*bcn(2)*qiy
-               fkmd(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                     - bcn(1)*diz - 2.0d0*bcn(2)*qiz
-               bcn(1) = bn(1) - (1.0d0-scale3*pscale(kk))*rr3
-               bcn(2) = bn(2) - 3.0d0*(1.0d0-scale5*pscale(kk))*rr5
-               bcn(3) = bn(3) - 15.0d0*(1.0d0-scale7*pscale(kk))*rr7
-               fimp(1) = -xr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                     - bcn(1)*dkx + 2.0d0*bcn(2)*qkx
-               fimp(2) = -yr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                     - bcn(1)*dky + 2.0d0*bcn(2)*qky
-               fimp(3) = -zr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                     - bcn(1)*dkz + 2.0d0*bcn(2)*qkz
-               fkmp(1) = xr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                     - bcn(1)*dix - 2.0d0*bcn(2)*qix
-               fkmp(2) = yr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                     - bcn(1)*diy - 2.0d0*bcn(2)*qiy
-               fkmp(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                     - bcn(1)*diz - 2.0d0*bcn(2)*qiz
+               fim(1) = -xr*(bn(1)*ck-bn(2)*dkr+bn(3)*qkr)
+     &                     - bn(1)*dkx + 2.0d0*bn(2)*qkx
+               fim(2) = -yr*(bn(1)*ck-bn(2)*dkr+bn(3)*qkr)
+     &                     - bn(1)*dky + 2.0d0*bn(2)*qky
+               fim(3) = -zr*(bn(1)*ck-bn(2)*dkr+bn(3)*qkr)
+     &                     - bn(1)*dkz + 2.0d0*bn(2)*qkz
+               fkm(1) = xr*(bn(1)*ci+bn(2)*dir+bn(3)*qir)
+     &                     - bn(1)*dix - 2.0d0*bn(2)*qix
+               fkm(2) = yr*(bn(1)*ci+bn(2)*dir+bn(3)*qir)
+     &                     - bn(1)*diy - 2.0d0*bn(2)*qiy
+               fkm(3) = zr*(bn(1)*ci+bn(2)*dir+bn(3)*qir)
+     &                     - bn(1)*diz - 2.0d0*bn(2)*qiz
+               fid(1) = -xr*(drr3*ck-drr5*dkr+drr7*qkr)
+     &                     - drr3*dkx + 2.0d0*drr5*qkx
+               fid(2) = -yr*(drr3*ck-drr5*dkr+drr7*qkr)
+     &                     - drr3*dky + 2.0d0*drr5*qky
+               fid(3) = -zr*(drr3*ck-drr5*dkr+drr7*qkr)
+     &                     - drr3*dkz + 2.0d0*drr5*qkz
+               fkd(1) = xr*(drr3*ci+drr5*dir+drr7*qir)
+     &                     - drr3*dix - 2.0d0*drr5*qix
+               fkd(2) = yr*(drr3*ci+drr5*dir+drr7*qir)
+     &                     - drr3*diy - 2.0d0*drr5*qiy
+               fkd(3) = zr*(drr3*ci+drr5*dir+drr7*qir)
+     &                     - drr3*diz - 2.0d0*drr5*qiz
+               fip(1) = -xr*(prr3*ck-prr5*dkr+prr7*qkr)
+     &                     - prr3*dkx + 2.0d0*prr5*qkx
+               fip(2) = -yr*(prr3*ck-prr5*dkr+prr7*qkr)
+     &                     - prr3*dky + 2.0d0*prr5*qky
+               fip(3) = -zr*(prr3*ck-prr5*dkr+prr7*qkr)
+     &                     - prr3*dkz + 2.0d0*prr5*qkz
+               fkp(1) = xr*(prr3*ci+prr5*dir+prr7*qir)
+     &                     - prr3*dix - 2.0d0*prr5*qix
+               fkp(2) = yr*(prr3*ci+prr5*dir+prr7*qir)
+     &                     - prr3*diy - 2.0d0*prr5*qiy
+               fkp(3) = zr*(prr3*ci+prr5*dir+prr7*qir)
+     &                     - prr3*diz - 2.0d0*prr5*qiz
 c
 c     increment the field at each site due to this interaction
 c
                do j = 1, 3
-                  field(j,i) = field(j,i) + fimd(j)
-                  field(j,k) = field(j,k) + fkmd(j)
-                  fieldp(j,i) = fieldp(j,i) + fimp(j)
-                  fieldp(j,k) = fieldp(j,k) + fkmp(j)
+                  field(j,i) = field(j,i) + fim(j) - fid(j)
+                  field(j,k) = field(j,k) + fkm(j) - fkd(j)
+                  fieldp(j,i) = fieldp(j,i) + fim(j) - fip(j)
+                  fieldp(j,k) = fieldp(j,k) + fkm(j) - fkp(j)
                end do
             end if
          end do
@@ -2067,26 +2103,24 @@ c
                   call imager (xr,yr,zr,m)
                   r2 = xr*xr + yr* yr + zr*zr
 c
-c     calculate the error function damping factors
+c     calculate the error function damping terms
 c
                   if (r2 .le. cut2) then
                      r = sqrt(r2)
-                     rr1 = 1.0d0 / r
-                     rr2 = rr1 * rr1
-                     rr3 = rr2 * rr1
-                     rr5 = rr2 * rr3
-                     rr7 = rr2 * rr5
                      ralpha = aewald * r
-                     bn(0) = erfc(ralpha) * rr1
+                     bn(0) = erfc(ralpha) / r
+                     alsq2 = 2.0d0 * aewald**2
+                     alsq2n = 0.0d0
+                     if (aewald .gt. 0.0d0)
+     &                  alsq2n = 1.0d0 / (sqrtpi*aewald)
                      exp2a = exp(-ralpha**2)
-                     aefac = aesq2n
                      do j = 1, 3
                         bfac = dble(j+j-1)
-                        aefac = aesq2 * aefac
-                        bn(j) = (bfac*bn(j-1)+aefac*exp2a) * rr2
+                        alsq2n = alsq2 * alsq2n
+                        bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) / r2
                      end do
 c
-c     compute the polarization damping scale factors
+c     compute the error function scaled and unscaled terms
 c
                      scale3 = 1.0d0
                      scale5 = 1.0d0
@@ -2119,9 +2153,12 @@ c
                            psc7 = scale7 * pscale(kk)
                         end if
                      end if
-c
-c     find the field terms for the current interaction
-c
+                     drr3 = (1.0d0-dsc3) / (r*r2)
+                     drr5 = 3.0d0 * (1.0d0-dsc5) / (r*r2*r2)
+                     drr7 = 15.0d0 * (1.0d0-dsc7) / (r*r2*r2*r2)
+                     prr3 = (1.0d0-psc3) / (r*r2)
+                     prr5 = 3.0d0 * (1.0d0-psc5) / (r*r2*r2)
+                     prr7 = 15.0d0 * (1.0d0-psc7) / (r*r2*r2*r2)
                      dir = dix*xr + diy*yr + diz*zr
                      qix = qixx*xr + qixy*yr + qixz*zr
                      qiy = qixy*xr + qiyy*yr + qiyz*zr
@@ -2132,45 +2169,51 @@ c
                      qky = qkxy*xr + qkyy*yr + qkyz*zr
                      qkz = qkxz*xr + qkyz*yr + qkzz*zr
                      qkr = qkx*xr + qky*yr + qkz*zr
-                     bcn(1) = bn(1) - (1.0d0-dsc3)*rr3
-                     bcn(2) = bn(2) - 3.0d0*(1.0d0-dsc5)*rr5
-                     bcn(3) = bn(3) - 15.0d0*(1.0d0-dsc7)*rr7
-                     fimd(1) = -xr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                           - bcn(1)*dkx + 2.0d0*bcn(2)*qkx
-                     fimd(2) = -yr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                           - bcn(1)*dky + 2.0d0*bcn(2)*qky
-                     fimd(3) = -zr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                           - bcn(1)*dkz + 2.0d0*bcn(2)*qkz
-                     fkmd(1) = xr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                           - bcn(1)*dix - 2.0d0*bcn(2)*qix
-                     fkmd(2) = yr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                           - bcn(1)*diy - 2.0d0*bcn(2)*qiy
-                     fkmd(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                           - bcn(1)*diz - 2.0d0*bcn(2)*qiz
-                     bcn(1) = bn(1) - (1.0d0-psc3)*rr3
-                     bcn(2) = bn(2) - 3.0d0*(1.0d0-psc5)*rr5
-                     bcn(3) = bn(3) - 15.0d0*(1.0d0-psc7)*rr7
-                     fimp(1) = -xr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                           - bcn(1)*dkx + 2.0d0*bcn(2)*qkx
-                     fimp(2) = -yr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                           - bcn(1)*dky + 2.0d0*bcn(2)*qky
-                     fimp(3) = -zr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
-     &                           - bcn(1)*dkz + 2.0d0*bcn(2)*qkz
-                     fkmp(1) = xr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                           - bcn(1)*dix - 2.0d0*bcn(2)*qix
-                     fkmp(2) = yr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                           - bcn(1)*diy - 2.0d0*bcn(2)*qiy
-                     fkmp(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
-     &                           - bcn(1)*diz - 2.0d0*bcn(2)*qiz
+                     fim(1) = -xr*(bn(1)*ck-bn(2)*dkr+bn(3)*qkr)
+     &                           - bn(1)*dkx + 2.0d0*bn(2)*qkx
+                     fim(2) = -yr*(bn(1)*ck-bn(2)*dkr+bn(3)*qkr)
+     &                           - bn(1)*dky + 2.0d0*bn(2)*qky
+                     fim(3) = -zr*(bn(1)*ck-bn(2)*dkr+bn(3)*qkr)
+     &                           - bn(1)*dkz + 2.0d0*bn(2)*qkz
+                     fkm(1) = xr*(bn(1)*ci+bn(2)*dir+bn(3)*qir)
+     &                           - bn(1)*dix - 2.0d0*bn(2)*qix
+                     fkm(2) = yr*(bn(1)*ci+bn(2)*dir+bn(3)*qir)
+     &                           - bn(1)*diy - 2.0d0*bn(2)*qiy
+                     fkm(3) = zr*(bn(1)*ci+bn(2)*dir+bn(3)*qir)
+     &                           - bn(1)*diz - 2.0d0*bn(2)*qiz
+                     fid(1) = -xr*(drr3*ck-drr5*dkr+drr7*qkr)
+     &                           - drr3*dkx + 2.0d0*drr5*qkx
+                     fid(2) = -yr*(drr3*ck-drr5*dkr+drr7*qkr)
+     &                           - drr3*dky + 2.0d0*drr5*qky
+                     fid(3) = -zr*(drr3*ck-drr5*dkr+drr7*qkr)
+     &                           - drr3*dkz + 2.0d0*drr5*qkz
+                     fkd(1) = xr*(drr3*ci+drr5*dir+drr7*qir)
+     &                           - drr3*dix - 2.0d0*drr5*qix
+                     fkd(2) = yr*(drr3*ci+drr5*dir+drr7*qir)
+     &                           - drr3*diy - 2.0d0*drr5*qiy
+                     fkd(3) = zr*(drr3*ci+drr5*dir+drr7*qir)
+     &                           - drr3*diz - 2.0d0*drr5*qiz
+                     fip(1) = -xr*(prr3*ck-prr5*dkr+prr7*qkr)
+     &                           - prr3*dkx + 2.0d0*prr5*qkx
+                     fip(2) = -yr*(prr3*ck-prr5*dkr+prr7*qkr)
+     &                           - prr3*dky + 2.0d0*prr5*qky
+                     fip(3) = -zr*(prr3*ck-prr5*dkr+prr7*qkr)
+     &                           - prr3*dkz + 2.0d0*prr5*qkz
+                     fkp(1) = xr*(prr3*ci+prr5*dir+prr7*qir)
+     &                           - prr3*dix - 2.0d0*prr5*qix
+                     fkp(2) = yr*(prr3*ci+prr5*dir+prr7*qir)
+     &                           - prr3*diy - 2.0d0*prr5*qiy
+                     fkp(3) = zr*(prr3*ci+prr5*dir+prr7*qir)
+     &                           - prr3*diz - 2.0d0*prr5*qiz
 c
 c     increment the field at each site due to this interaction
 c
                      do j = 1, 3
-                        field(j,i) = field(j,i) + fimd(j)
-                        fieldp(j,i) = fieldp(j,i) + fimd(j)
+                        field(j,i) = field(j,i) + fim(j) - fid(j)
+                        fieldp(j,i) = fieldp(j,i) + fim(j) - fip(j)
                         if (ii .ne. kk) then
-                           field(j,k) = field(j,k) + fkmp(j)
-                           fieldp(j,k) = fieldp(j,k) + fkmp(j)
+                           field(j,k) = field(j,k) + fkm(j) - fkd(j)
+                           fieldp(j,k) = fieldp(j,k) + fkm(j) - fkp(j)
                         end if
                      end do
                   end if
@@ -2236,23 +2279,23 @@ c
       include 'math.i'
       include 'mpole.i'
       include 'neigh.i'
-      include 'openmp.i'
       include 'polar.i'
       include 'polgrp.i'
       include 'polpot.i'
       include 'shunt.i'
-      include 'tarray.i'
       include 'units.i'
-      integer i,j,k,m
+cXiao 
+      include 'tarray.i'
+      include 'openmp.i'
+      integer i,j,k
       integer ii,kk,kkk
-      integer nlocal,maxlocal
-      integer tid,toffset0
-!$    integer omp_get_thread_num
-      integer, allocatable :: toffset(:)
-      integer, allocatable :: ilocal(:,:)
+cXiao
+      integer npair_local,g_offset0,maxlpair
+      integer tid,offset_t
+      integer g_offset(0:nthread-1)
+      integer, allocatable :: l_dip_index(:,:)
       real*8 xr,yr,zr,r,r2
-      real*8 rr1,rr2,rr3
-      real*8 rr5,rr7
+      real*8 rr1,rr2,rr3,rr5,rr7
       real*8 erfc,bfac,exp2a
       real*8 ci,dix,diy,diz
       real*8 qixx,qiyy,qizz
@@ -2263,72 +2306,72 @@ c
       real*8 dir,dkr
       real*8 qix,qiy,qiz,qir
       real*8 qkx,qky,qkz,qkr
-      real*8 ralpha,aefac
-      real*8 aesq2,aesq2n
+      real*8 ralpha
+      real*8 alsq2,alsq2fac,alsq2n
       real*8 pdi,pti,pgamma
       real*8 damp,expdamp
-      real*8 scale3,scale5
-      real*8 scale7
-      real*8 bn(0:3),bcn(3)
+      real*8 scale3,scale5,scale7
+      real*8 bn(0:3),bcn(3),cn(3)
       real*8 fimd(3),fkmd(3)
       real*8 fimp(3),fkmp(3)
-      real*8, allocatable :: pscale(:)
-      real*8, allocatable :: dscale(:)
       real*8, allocatable :: uscale(:)
+      real*8, allocatable :: dscale(:)
+      real*8, allocatable :: pscale(:)
       real*8 field(3,*)
       real*8 fieldp(3,*)
       real*8, allocatable :: fieldt(:,:)
       real*8, allocatable :: fieldtp(:,:)
-      real*8, allocatable :: dlocal(:,:)
+      real*8, allocatable :: l_dipdip(:,:)
       character*6 mode
       external erfc
+!$    integer omp_get_thread_num
 c
+c
+c     perform dynamic allocation of some local arrays
+c
+      maxlpair=int(0.5d0*npole*maxelst/nthread)
+      allocate (fieldt(3,npole))
+      allocate (fieldtp(3,npole))
 c
 c     check for multipoles and set cutoff coefficients
 c
       if (npole .eq. 0)  return
       mode = 'EWALD'
       call switch (mode)
-      aesq2 = 2.0 * aewald * aewald
-      aesq2n = 0.0d0
-      if (aewald .gt. 0.0d0)  aesq2n = 1.0d0 / (sqrtpi*aewald)
-      nlocal = 0
-      toffset0 = 0
-      maxlocal = int((npole*maxelst)/nthread)
+
+      if (aewald .lt. 1.0d-7) return
+      alsq2 = 2.0d0 * aewald*aewald
+      alsq2fac = 1.0d0 / (sqrtpi*aewald)
+      npair_local=0
+      g_offset0=0
+
 c
-c     perform dynamic allocation of some local arrays
+c     set OpenMP directives for the major loop structure
 c
-      allocate (toffset(0:nthread-1))
-      allocate (pscale(n))
-      allocate (dscale(n))
+!$OMP PARALLEL default(shared) private(i,j,k,ii,kk,kkk,pdi,pti,
+!$OMP& ci,dix,diy,diz,qixx,qixy,qixz,qiyy,qiyz,qizz,
+!$OMP& ck,dkx,dky,dkz,qkxx,qkxy,qkxz,qkyy,qkyz,qkzz,
+!$OMP& xr,yr,zr,r,r2,rr1,rr2,rr3,rr5,rr7,bn,cn,bcn,ralpha, 
+!$OMP& alsq2n,exp2a,bfac,scale3,scale5,scale7,damp,pgamma,expdamp,
+!$OMP& dir,qix,qiy,qiz,qir,dkr,qkx,qky,qkz,qkr,fimd,fkmd,fimp,fkmp,
+!$OMP& tid,offset_t,l_dipdip,l_dip_index,uscale,dscale,pscale)
+!$OMP& firstprivate(npair_local)
+
       allocate (uscale(n))
-      allocate (fieldt(3,npole))
-      allocate (fieldtp(3,npole))
+      allocate (dscale(n))
+      allocate (pscale(n))
+      allocate (l_dipdip(6,maxlpair))
+      allocate (l_dip_index(2,maxlpair))
+
+
 c
 c     set arrays needed to scale connected atom interactions
 c
       do i = 1, n
-         pscale(i) = 1.0d0
-         dscale(i) = 1.0d0
          uscale(i) = 1.0d0
+         dscale(i) = 1.0d0
+         pscale(i) = 1.0d0
       end do
-c
-c     set OpenMP directives for the major loop structure
-c
-!$OMP PARALLEL default(private) shared(n,npole,ipole,x,y,z,pdamp,thole,
-!$OMP& rpole,p2scale,p3scale,p4scale,p41scale,p5scale,d1scale,d2scale,
-!$OMP& d3scale,d4scale,u1scale,u2scale,u3scale,u4scale,n12,i12,n13,i13,
-!$OMP& n14,i14,n15,i15,np11,ip11,np12,ip12,np13,ip13,np14,ip14,nelst,
-!$OMP& elst,cut2,aewald,aesq2,aesq2n,poltyp,ntpair,tindex,tdipdip,
-!$OMP& toffset,toffset0,field,fieldp,fieldt,fieldtp,maxlocal)
-!$OMP& firstprivate(pscale,dscale,uscale,nlocal)
-c
-c     perform dynamic allocation of some local arrays
-c
-      if (poltyp .eq. 'MUTUAL') then
-         allocate (ilocal(2,maxlocal))
-         allocate (dlocal(6,maxlocal))
-      end if
 c
 c     initialize local variables for OpenMP calculation
 c
@@ -2340,10 +2383,11 @@ c
          end do
       end do
 !$OMP END DO
+
+!$OMP DO reduction(+:fieldt,fieldtp) schedule(guided)
 c
 c     compute the real space portion of the Ewald summation
 c
-!$OMP DO reduction(+:fieldt,fieldtp) schedule(guided)
       do i = 1, npole
          ii = ipole(i)
          pdi = pdamp(i)
@@ -2375,20 +2419,20 @@ c
             pscale(i15(j,ii)) = p5scale
          end do
          do j = 1, np11(ii)
-            dscale(ip11(j,ii)) = d1scale
             uscale(ip11(j,ii)) = u1scale
+            dscale(ip11(j,ii)) = d1scale
          end do
          do j = 1, np12(ii)
-            dscale(ip12(j,ii)) = d2scale
             uscale(ip12(j,ii)) = u2scale
+            dscale(ip12(j,ii)) = d2scale
          end do
          do j = 1, np13(ii)
-            dscale(ip13(j,ii)) = d3scale
             uscale(ip13(j,ii)) = u3scale
+            dscale(ip13(j,ii)) = d3scale
          end do
          do j = 1, np14(ii)
-            dscale(ip14(j,ii)) = d4scale
             uscale(ip14(j,ii)) = u4scale
+            dscale(ip14(j,ii)) = d4scale
          end do
          do kkk = 1, nelst(i)
             k = elst(kkk,i)
@@ -2416,19 +2460,20 @@ c
                qkyz = rpole(10,k)
                qkzz = rpole(13,k)
 c
-c     calculate the error function damping factors
+c     calculate the error function damping terms
 c
                ralpha = aewald * r
                bn(0) = erfc(ralpha) * rr1
                exp2a = exp(-ralpha**2)
-               aefac = aesq2n
+               alsq2n=alsq2fac
                do j = 1, 3
-                  bfac = dble(j+j-1)
-                  aefac = aesq2 * aefac
-                  bn(j) = (bfac*bn(j-1)+aefac*exp2a) * rr2
+                  bfac = dble(2*j-1)
+                  alsq2n = alsq2 * alsq2n
+                  bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) * rr2
                end do
+
 c
-c     compute the polarization damping scale factors
+c     compute the error function scaled and unscaled terms
 c
                scale3 = 1.0d0
                scale5 = 1.0d0
@@ -2445,9 +2490,23 @@ c
      &                           *(1.0d0-damp+0.6d0*damp**2)
                   end if
                end if
-c
-c     find the field terms for the current interaction
-c
+
+               cn(1) = (1.0d0-scale3 * uscale(kk)) * rr3
+               cn(2) = 3.0d0 * (1.0d0-scale5 * uscale(kk)) * rr5
+
+               bcn(1)=bn(1)-cn(1)
+               bcn(2)=bn(2)-cn(2)
+
+               npair_local=npair_local+1
+               l_dipdip(1,npair_local)=-bcn(1)+bcn(2)*xr*xr
+               l_dipdip(2,npair_local)=bcn(2)*xr*yr
+               l_dipdip(3,npair_local)=bcn(2)*xr*zr
+               l_dipdip(4,npair_local)=-bcn(1)+bcn(2)*yr*yr
+               l_dipdip(5,npair_local)=bcn(2)*yr*zr
+               l_dipdip(6,npair_local)=-bcn(1)+bcn(2)*zr*zr
+               l_dip_index(1,npair_local)=i
+               l_dip_index(2,npair_local)=k
+
                dir = dix*xr + diy*yr + diz*zr
                qix = qixx*xr + qixy*yr + qixz*zr
                qiy = qixy*xr + qiyy*yr + qiyz*zr
@@ -2458,9 +2517,15 @@ c
                qky = qkxy*xr + qkyy*yr + qkyz*zr
                qkz = qkxz*xr + qkyz*yr + qkzz*zr
                qkr = qkx*xr + qky*yr + qkz*zr
-               bcn(1) = bn(1) - (1.0d0-scale3*dscale(kk))*rr3
-               bcn(2) = bn(2) - 3.0d0*(1.0d0-scale5*dscale(kk))*rr5
-               bcn(3) = bn(3) - 15.0d0*(1.0d0-scale7*dscale(kk))*rr7
+
+               cn(1) = (1.0d0-scale3 * dscale(kk)) * rr3
+               cn(2) = 3.0d0 * (1.0d0-scale5 * dscale(kk)) * rr5
+               cn(3) = 15.0d0 * (1.0d0-scale7 * dscale(kk)) * rr7
+
+               bcn(1)=bn(1)-cn(1)
+               bcn(2)=bn(2)-cn(2)
+               bcn(3)=bn(3)-cn(3)
+
                fimd(1) = -xr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
      &                     - bcn(1)*dkx + 2.0d0*bcn(2)*qkx
                fimd(2) = -yr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
@@ -2473,9 +2538,15 @@ c
      &                     - bcn(1)*diy - 2.0d0*bcn(2)*qiy
                fkmd(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
      &                     - bcn(1)*diz - 2.0d0*bcn(2)*qiz
-               bcn(1) = bn(1) - (1.0d0-scale3*pscale(kk))*rr3
-               bcn(2) = bn(2) - 3.0d0*(1.0d0-scale5*pscale(kk))*rr5
-               bcn(3) = bn(3) - 15.0d0*(1.0d0-scale7*pscale(kk))*rr7
+
+               cn(1) = (1.0d0-scale3 * pscale(kk)) * rr3
+               cn(2) = 3.0d0 * (1.0d0-scale5 * pscale(kk)) * rr5
+               cn(3) = 15.0d0 * (1.0d0-scale7 * pscale(kk)) * rr7
+
+               bcn(1)=bn(1)-cn(1)
+               bcn(2)=bn(2)-cn(2)
+               bcn(3)=bn(3)-cn(3)
+
                fimp(1) = -xr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
      &                     - bcn(1)*dkx + 2.0d0*bcn(2)*qkx
                fimp(2) = -yr*(bcn(1)*ck-bcn(2)*dkr+bcn(3)*qkr)
@@ -2488,22 +2559,8 @@ c
      &                     - bcn(1)*diy - 2.0d0*bcn(2)*qiy
                fkmp(3) = zr*(bcn(1)*ci+bcn(2)*dir+bcn(3)*qir)
      &                     - bcn(1)*diz - 2.0d0*bcn(2)*qiz
-c
-c     find terms needed later to compute mutual polarization
-c
-               if (poltyp .eq. 'MUTUAL') then
-                  bcn(1) = bn(1) - (1.0d0-scale3*uscale(kk))*rr3
-                  bcn(2) = bn(2) - 3.0d0*(1.0d0-scale5*uscale(kk))*rr5
-                  nlocal = nlocal + 1
-                  ilocal(1,nlocal) = i
-                  ilocal(2,nlocal) = k
-                  dlocal(1,nlocal) = -bcn(1) + bcn(2)*xr*xr
-                  dlocal(2,nlocal) = bcn(2)*xr*yr
-                  dlocal(3,nlocal) = bcn(2)*xr*zr
-                  dlocal(4,nlocal) = -bcn(1) + bcn(2)*yr*yr
-                  dlocal(5,nlocal) = bcn(2)*yr*zr
-                  dlocal(6,nlocal) = -bcn(1) + bcn(2)*zr*zr
-               end if
+
+
 c
 c     increment the field at each site due to this interaction
 c
@@ -2549,7 +2606,7 @@ c
       end do
 !$OMP END DO
 c
-c     transfer the results from local to global arrays
+c     end OpenMP directives for the major loop structure
 c
 !$OMP DO
       do i = 1, npole
@@ -2559,39 +2616,48 @@ c
          end do
       end do
 !$OMP END DO
-c
-c     store terms needed later to compute mutual polarization
-c
+
 !$OMP CRITICAL
-      tid = 0
-!$    tid = omp_get_thread_num ()
-      toffset(tid) = toffset0
-      toffset0 = toffset0 + nlocal
-      ntpair = toffset0
+!$    tid=omp_get_thread_num()
+c     print *,"local pair",tid,g_offset(tid),npair_local
+      g_offset(tid)=g_offset0
+      g_offset0=g_offset0+npair_local
+      npair=g_offset0
+c     print *,"local pair2",tid,g_offset(tid),npair_local
+c     print *,"global pair",npair
 !$OMP END CRITICAL
-      if (poltyp .eq. 'MUTUAL') then
-         k = toffset(tid)
-         do i = 1, nlocal
-            m = k + i
-            tindex(1,m) = ilocal(1,i)
-            tindex(2,m) = ilocal(2,i)
-            do j = 1, 6
-               tdipdip(j,m) = dlocal(j,i)
-            end do
-         end do
-         deallocate (ilocal)
-         deallocate (dlocal)
-      end if
+      offset_t=g_offset(tid)
+      do i=1,npair_local
+       do j=1,6
+         ta_dipdip(j,offset_t+i)=l_dipdip(j,i)
+       end do
+       ta_dip_index(1,offset_t+i)=l_dip_index(1,i)
+       ta_dip_index(2,offset_t+i)=l_dip_index(2,i)
+c      if ( i.eq. 100) then
+c       print *,omp_get_thread_num(),tid,g_offset(tid),offset_t,
+c    $      l_dipdip(1,100),ta_dipdip(1,offset_t+100)
+c      endif
+c      print *,omp_get_thread_num(),ta_dip_index(1,offset_t+i),
+c    $       l_dip_index(1,i)
+      end do
+c     print *,omp_get_thread_num(),offset_t+100,
+c    $        l_dipdip(1,100),ta_dipdip(1,offset_t+100)
+c     print *,omp_get_thread_num(),l_dipdip(1,100),ta_dipdip(1,200000)
+c     end do
+
+      deallocate (uscale)
+      deallocate (dscale)
+      deallocate (pscale)
+      deallocate (l_dipdip)
+      deallocate (l_dip_index)
+
 !$OMP END PARALLEL
 c
 c     perform deallocation of some local arrays
 c
-      deallocate (toffset)
-      deallocate (pscale)
-      deallocate (dscale)
-      deallocate (uscale)
       deallocate (fieldt)
       deallocate (fieldtp)
+
       return
       end
 c
@@ -2751,8 +2817,8 @@ c
       include 'units.i'
       integer i,j,k,m
       integer ii,kk
-      real*8 xr,yr,zr,r,r2
-      real*8 rr1,rr2,rr3,rr5
+      real*8 xr,yr,zr
+      real*8 r,r2,rr3,rr5
       real*8 erfc,bfac,exp2a
       real*8 duir,dukr
       real*8 puir,pukr
@@ -2760,15 +2826,17 @@ c
       real*8 puix,puiy,puiz
       real*8 dukx,duky,dukz
       real*8 pukx,puky,pukz
-      real*8 ralpha,aefac
-      real*8 aesq2,aesq2n
+      real*8 ralpha
+      real*8 alsq2,alsq2n
       real*8 pdi,pti,pgamma
       real*8 damp,expdamp
       real*8 scale3,scale5
       real*8 bn(0:2)
       real*8 fimd(3),fkmd(3)
       real*8 fimp(3),fkmp(3)
-      real*8, allocatable :: uscale(:)
+      real*8 fid(3),fkd(3)
+      real*8 fip(3),fkp(3)
+      real*8, allocatable :: dscale(:)
       real*8 field(3,*)
       real*8 fieldp(3,*)
       character*6 mode
@@ -2780,18 +2848,15 @@ c
       if (npole .eq. 0)  return
       mode = 'EWALD'
       call switch (mode)
-      aesq2 = 2.0 * aewald * aewald
-      aesq2n = 0.0d0
-      if (aewald .gt. 0.0d0)  aesq2n = 1.0d0 / (sqrtpi*aewald)
 c
 c     perform dynamic allocation of some local arrays
 c
-      allocate (uscale(n))
+      allocate (dscale(n))
 c
 c     set array needed to scale connected atom interactions
 c
       do i = 1, n
-         uscale(i) = 1.0d0
+         dscale(i) = 1.0d0
       end do
 c
 c     compute the real space portion of the Ewald summation
@@ -2807,16 +2872,16 @@ c
          puiy = uinp(2,i)
          puiz = uinp(3,i)
          do j = 1, np11(ii)
-            uscale(ip11(j,ii)) = u1scale
+            dscale(ip11(j,ii)) = u1scale
          end do
          do j = 1, np12(ii)
-            uscale(ip12(j,ii)) = u2scale
+            dscale(ip12(j,ii)) = u2scale
          end do
          do j = 1, np13(ii)
-            uscale(ip13(j,ii)) = u3scale
+            dscale(ip13(j,ii)) = u3scale
          end do
          do j = 1, np14(ii)
-            uscale(ip14(j,ii)) = u4scale
+            dscale(ip14(j,ii)) = u4scale
          end do
          do k = i+1, npole
             kk = ipole(k)
@@ -2827,10 +2892,6 @@ c
             r2 = xr*xr + yr* yr + zr*zr
             if (r2 .le. cut2) then
                r = sqrt(r2)
-               rr1 = 1.0d0 / r
-               rr2 = rr1 * rr1
-               rr3 = rr2 * rr1
-               rr5 = rr2 * rr3
                dukx = uind(1,k)
                duky = uind(2,k)
                dukz = uind(3,k)
@@ -2838,22 +2899,25 @@ c
                puky = uinp(2,k)
                pukz = uinp(3,k)
 c
-c     calculate the error function damping factors
+c     calculate the error function damping terms
 c
                ralpha = aewald * r
-               bn(0) = erfc(ralpha) * rr1
+               bn(0) = erfc(ralpha) / r
+               alsq2 = 2.0d0 * aewald**2
+               alsq2n = 0.0d0
+               if (aewald .gt. 0.0d0)
+     &            alsq2n = 1.0d0 / (sqrtpi*aewald)
                exp2a = exp(-ralpha**2)
-               aefac = aesq2n
                do j = 1, 2
                   bfac = dble(j+j-1)
-                  aefac = aesq2 * aefac
-                  bn(j) = (bfac*bn(j-1)+aefac*exp2a) * rr2
+                  alsq2n = alsq2 * alsq2n
+                  bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) / r2
                end do
 c
-c     compute the polarization damping scale factors
+c     compute the error function scaled and unscaled terms
 c
-               scale3 = uscale(kk)
-               scale5 = uscale(kk)
+               scale3 = dscale(kk)
+               scale5 = dscale(kk)
                damp = pdi * pdamp(k)
                if (damp .ne. 0.0d0) then
                   pgamma = min(pti,thole(k))
@@ -2864,35 +2928,44 @@ c
                      scale5 = scale5 * (1.0d0-(1.0d0-damp)*expdamp)
                   end if
                end if
-               bn(1) = -bn(1) + (1.0d0-scale3)*rr3
-               bn(2) = bn(2) - 3.0d0*(1.0d0-scale5)*rr5
-c
-c     find the field terms for the current interaction
-c
+               rr3 = (1.0d0-scale3) / (r*r2)
+               rr5 = 3.0d0 * (1.0d0-scale5) / (r*r2*r2)
                duir = xr*duix + yr*duiy + zr*duiz
                dukr = xr*dukx + yr*duky + zr*dukz
                puir = xr*puix + yr*puiy + zr*puiz
                pukr = xr*pukx + yr*puky + zr*pukz
-               fimd(1) = bn(1)*dukx + bn(2)*dukr*xr
-               fimd(2) = bn(1)*duky + bn(2)*dukr*yr
-               fimd(3) = bn(1)*dukz + bn(2)*dukr*zr
-               fkmd(1) = bn(1)*duix + bn(2)*duir*xr
-               fkmd(2) = bn(1)*duiy + bn(2)*duir*yr
-               fkmd(3) = bn(1)*duiz + bn(2)*duir*zr
-               fimp(1) = bn(1)*pukx + bn(2)*pukr*xr
-               fimp(2) = bn(1)*puky + bn(2)*pukr*yr
-               fimp(3) = bn(1)*pukz + bn(2)*pukr*zr
-               fkmp(1) = bn(1)*puix + bn(2)*puir*xr
-               fkmp(2) = bn(1)*puiy + bn(2)*puir*yr
-               fkmp(3) = bn(1)*puiz + bn(2)*puir*zr
+               fimd(1) = -bn(1)*dukx + bn(2)*dukr*xr
+               fimd(2) = -bn(1)*duky + bn(2)*dukr*yr
+               fimd(3) = -bn(1)*dukz + bn(2)*dukr*zr
+               fkmd(1) = -bn(1)*duix + bn(2)*duir*xr
+               fkmd(2) = -bn(1)*duiy + bn(2)*duir*yr
+               fkmd(3) = -bn(1)*duiz + bn(2)*duir*zr
+               fimp(1) = -bn(1)*pukx + bn(2)*pukr*xr
+               fimp(2) = -bn(1)*puky + bn(2)*pukr*yr
+               fimp(3) = -bn(1)*pukz + bn(2)*pukr*zr
+               fkmp(1) = -bn(1)*puix + bn(2)*puir*xr
+               fkmp(2) = -bn(1)*puiy + bn(2)*puir*yr
+               fkmp(3) = -bn(1)*puiz + bn(2)*puir*zr
+               fid(1) = -rr3*dukx + rr5*dukr*xr
+               fid(2) = -rr3*duky + rr5*dukr*yr
+               fid(3) = -rr3*dukz + rr5*dukr*zr
+               fkd(1) = -rr3*duix + rr5*duir*xr
+               fkd(2) = -rr3*duiy + rr5*duir*yr
+               fkd(3) = -rr3*duiz + rr5*duir*zr
+               fip(1) = -rr3*pukx + rr5*pukr*xr
+               fip(2) = -rr3*puky + rr5*pukr*yr
+               fip(3) = -rr3*pukz + rr5*pukr*zr
+               fkp(1) = -rr3*puix + rr5*puir*xr
+               fkp(2) = -rr3*puiy + rr5*puir*yr
+               fkp(3) = -rr3*puiz + rr5*puir*zr
 c
 c     increment the field at each site due to this interaction
 c
                do j = 1, 3
-                  field(j,i) = field(j,i) + fimd(j)
-                  field(j,k) = field(j,k) + fkmd(j)
-                  fieldp(j,i) = fieldp(j,i) + fimp(j)
-                  fieldp(j,k) = fieldp(j,k) + fkmp(j)
+                  field(j,i) = field(j,i) + fimd(j) - fid(j)
+                  field(j,k) = field(j,k) + fkmd(j) - fkd(j)
+                  fieldp(j,i) = fieldp(j,i) + fimp(j) - fip(j)
+                  fieldp(j,k) = fieldp(j,k) + fkmp(j) - fkp(j)
                end do
             end if
          end do
@@ -2900,16 +2973,16 @@ c
 c     reset interaction scaling coefficients for connected atoms
 c
          do j = 1, np11(ii)
-            uscale(ip11(j,ii)) = 1.0d0
+            dscale(ip11(j,ii)) = 1.0d0
          end do
          do j = 1, np12(ii)
-            uscale(ip12(j,ii)) = 1.0d0
+            dscale(ip12(j,ii)) = 1.0d0
          end do
          do j = 1, np13(ii)
-            uscale(ip13(j,ii)) = 1.0d0
+            dscale(ip13(j,ii)) = 1.0d0
          end do
          do j = 1, np14(ii)
-            uscale(ip14(j,ii)) = 1.0d0
+            dscale(ip14(j,ii)) = 1.0d0
          end do
       end do
 c
@@ -2927,16 +3000,16 @@ c
             puiy = uinp(2,i)
             puiz = uinp(3,i)
             do j = 1, np11(ii)
-               uscale(ip11(j,ii)) = u1scale
+               dscale(ip11(j,ii)) = u1scale
             end do
             do j = 1, np12(ii)
-               uscale(ip12(j,ii)) = u2scale
+               dscale(ip12(j,ii)) = u2scale
             end do
             do j = 1, np13(ii)
-               uscale(ip13(j,ii)) = u3scale
+               dscale(ip13(j,ii)) = u3scale
             end do
             do j = 1, np14(ii)
-               uscale(ip14(j,ii)) = u4scale
+               dscale(ip14(j,ii)) = u4scale
             end do
             do k = i, npole
                kk = ipole(k)
@@ -2953,25 +3026,24 @@ c
                   call imager (xr,yr,zr,m)
                   r2 = xr*xr + yr* yr + zr*zr
 c
-c     calculate the error function damping factors
+c     calculate the error function damping terms
 c
                   if (r2 .le. cut2) then
                      r = sqrt(r2)
-                     rr1 = 1.0d0 / r
-                     rr2 = rr1 * rr1
-                     rr3 = rr2 * rr1
-                     rr5 = rr2 * rr3
                      ralpha = aewald * r
-                     bn(0) = erfc(ralpha) * rr1
+                     bn(0) = erfc(ralpha) / r
+                     alsq2 = 2.0d0 * aewald**2
+                     alsq2n = 0.0d0
+                     if (aewald .gt. 0.0d0)
+     &                  alsq2n = 1.0d0 / (sqrtpi*aewald)
                      exp2a = exp(-ralpha**2)
-                     aefac = aesq2n
                      do j = 1, 2
                         bfac = dble(j+j-1)
-                        aefac = aesq2 * aefac
-                        bn(j) = (bfac*bn(j-1)+aefac*exp2a) * rr2
+                        alsq2n = alsq2 * alsq2n
+                        bn(j) = (bfac*bn(j-1)+alsq2n*exp2a) / r2
                      end do
 c
-c     compute the polarization damping scale factors
+c     compute the error function scaled and unscaled terms
 c
                      scale3 = 1.0d0
                      scale5 = 1.0d0
@@ -2987,40 +3059,49 @@ c
                      end if
                      if (use_polymer) then
                         if (r2 .le. polycut2) then
-                           scale3 = scale3 * uscale(kk)
-                           scale5 = scale5 * uscale(kk)
+                           scale3 = scale3 * dscale(kk)
+                           scale5 = scale5 * dscale(kk)
                         end if
                      end if
-                     bn(1) = -bn(1) + (1.0d0-scale3)*rr3
-                     bn(2) = bn(2) - 3.0d0*(1.0d0-scale5)*rr5
-c
-c     find the field terms for the current interaction
-c
+                     rr3 = (1.0d0-scale3) / (r*r2)
+                     rr5 = 3.0d0 * (1.0d0-scale5) / (r*r2*r2)
                      duir = xr*duix + yr*duiy + zr*duiz
                      dukr = xr*dukx + yr*duky + zr*dukz
                      puir = xr*puix + yr*puiy + zr*puiz
                      pukr = xr*pukx + yr*puky + zr*pukz
-                     fimd(1) = bn(1)*dukx + bn(2)*dukr*xr
-                     fimd(2) = bn(1)*duky + bn(2)*dukr*yr
-                     fimd(3) = bn(1)*dukz + bn(2)*dukr*zr
-                     fkmd(1) = bn(1)*duix + bn(2)*duir*xr
-                     fkmd(2) = bn(1)*duiy + bn(2)*duir*yr
-                     fkmd(3) = bn(1)*duiz + bn(2)*duir*zr
-                     fimp(1) = bn(1)*pukx + bn(2)*pukr*xr
-                     fimp(2) = bn(1)*puky + bn(2)*pukr*yr
-                     fimp(3) = bn(1)*pukz + bn(2)*pukr*zr
-                     fkmp(1) = bn(1)*puix + bn(2)*puir*xr
-                     fkmp(2) = bn(1)*puiy + bn(2)*puir*yr
-                     fkmp(3) = bn(1)*puiz + bn(2)*puir*zr
+                     fimd(1) = -bn(1)*dukx + bn(2)*dukr*xr
+                     fimd(2) = -bn(1)*duky + bn(2)*dukr*yr
+                     fimd(3) = -bn(1)*dukz + bn(2)*dukr*zr
+                     fkmd(1) = -bn(1)*duix + bn(2)*duir*xr
+                     fkmd(2) = -bn(1)*duiy + bn(2)*duir*yr
+                     fkmd(3) = -bn(1)*duiz + bn(2)*duir*zr
+                     fimp(1) = -bn(1)*pukx + bn(2)*pukr*xr
+                     fimp(2) = -bn(1)*puky + bn(2)*pukr*yr
+                     fimp(3) = -bn(1)*pukz + bn(2)*pukr*zr
+                     fkmp(1) = -bn(1)*puix + bn(2)*puir*xr
+                     fkmp(2) = -bn(1)*puiy + bn(2)*puir*yr
+                     fkmp(3) = -bn(1)*puiz + bn(2)*puir*zr
+                     fid(1) = -rr3*dukx + rr5*dukr*xr
+                     fid(2) = -rr3*duky + rr5*dukr*yr
+                     fid(3) = -rr3*dukz + rr5*dukr*zr
+                     fkd(1) = -rr3*duix + rr5*duir*xr
+                     fkd(2) = -rr3*duiy + rr5*duir*yr
+                     fkd(3) = -rr3*duiz + rr5*duir*zr
+                     fip(1) = -rr3*pukx + rr5*pukr*xr
+                     fip(2) = -rr3*puky + rr5*pukr*yr
+                     fip(3) = -rr3*pukz + rr5*pukr*zr
+                     fkp(1) = -rr3*puix + rr5*puir*xr
+                     fkp(2) = -rr3*puiy + rr5*puir*yr
+                     fkp(3) = -rr3*puiz + rr5*puir*zr
 c
 c     increment the field at each site due to this interaction
 c
                      do j = 1, 3
-                        field(j,i) = field(j,i) + fimd(j)
-                        fieldp(j,i) = fieldp(j,i) + fimp(j)
+                        field(j,i) = field(j,i) + fimd(j) - fid(j)
+                        fieldp(j,i) = fieldp(j,i) + fimp(j) - fip(j)
                         if (ii .ne. kk) then
-                           field(j,k) = field(j,k) + fkmd(j)
-                           fieldp(j,k) = fieldp(j,k) + fkmp(j)
+                           field(j,k) = field(j,k) + fkmd(j) - fkd(j)
+                           fieldp(j,k) = fieldp(j,k) + fkmp(j) - fkp(j)
                         end if
                      end do
                   end if
@@ -3030,23 +3111,23 @@ c
 c     reset interaction scaling coefficients for connected atoms
 c
             do j = 1, np11(ii)
-               uscale(ip11(j,ii)) = 1.0d0
+               dscale(ip11(j,ii)) = 1.0d0
             end do
             do j = 1, np12(ii)
-               uscale(ip12(j,ii)) = 1.0d0
+               dscale(ip12(j,ii)) = 1.0d0
             end do
             do j = 1, np13(ii)
-               uscale(ip13(j,ii)) = 1.0d0
+               dscale(ip13(j,ii)) = 1.0d0
             end do
             do j = 1, np14(ii)
-               uscale(ip14(j,ii)) = 1.0d0
+               dscale(ip14(j,ii)) = 1.0d0
             end do
          end do
       end if
 c
 c     perform deallocation of some local arrays
 c
-      deallocate (uscale)
+      deallocate (dscale)
       return
       end
 c
@@ -3065,10 +3146,16 @@ c
       subroutine umutual2b (field,fieldp)
       implicit none
       include 'sizes.i'
+      include 'math.i'
       include 'mpole.i'
+      include 'neigh.i'
       include 'polar.i'
+      include 'units.i'
       include 'tarray.i'
-      integer i,j,k,m
+      integer i,j,k,ipair
+c     real*8 bn(2),dipdip(6)
+c     real*8 ldui(3),lpui(3)
+c     real*8 lduk(3),lpuk(3)
       real*8 fimd(3),fkmd(3)
       real*8 fimp(3),fkmp(3)
       real*8 field(3,*)
@@ -3077,22 +3164,25 @@ c
       real*8, allocatable :: fieldtp(:,:)
 c
 c
-c     check for multipoles and set cutoff coefficients
-c
-      if (npole .eq. 0)  return
-c
 c     perform dynamic allocation of some local arrays
 c
       allocate (fieldt(3,npole))
       allocate (fieldtp(3,npole))
 c
-c     set OpenMP directives for the major loop structure
+c     check for multipoles and set cutoff coefficients
 c
-!$OMP PARALLEL default(private) shared(npole,uind,uinp,ntpair,tindex,
-!$OMP& tdipdip,field,fieldp,fieldt,fieldtp)
+      if (npole .eq. 0)  return
+c     mode = 'EWALD'
+c     call switch (mode)
 c
 c     initialize local variables for OpenMP calculation
 c
+c
+c     set OpenMP directives for the major loop structure
+c
+!$OMP PARALLEL default(shared) private(fimd,fkmd,
+!$OMP& fimp,fkmp,i,j,k,ipair)
+
 !$OMP DO collapse(2)
       do i = 1, npole
          do j = 1, 3
@@ -3101,38 +3191,51 @@ c
          end do
       end do
 !$OMP END DO
+
+!$OMP DO reduction(+:fieldt,fieldtp) schedule(static,500)
 c
-c     find the field terms for each pairwise interaction
+c     compute the real space portion of the Ewald summation
 c
-!$OMP DO reduction(+:fieldt,fieldtp) schedule(guided)
-      do m = 1, ntpair
-         i = tindex(1,m)
-         k = tindex(2,m)
-         fimd(1) = tdipdip(1,m)*uind(1,k) + tdipdip(2,m)*uind(2,k)
-     &                + tdipdip(3,m)*uind(3,k)
-         fimd(2) = tdipdip(2,m)*uind(1,k) + tdipdip(4,m)*uind(2,k)
-     &                + tdipdip(5,m)*uind(3,k)
-         fimd(3) = tdipdip(3,m)*uind(1,k) + tdipdip(5,m)*uind(2,k)
-     &                + tdipdip(6,m)*uind(3,k)
-         fkmd(1) = tdipdip(1,m)*uind(1,i) + tdipdip(2,m)*uind(2,i)
-     &                + tdipdip(3,m)*uind(3,i)
-         fkmd(2) = tdipdip(2,m)*uind(1,i) + tdipdip(4,m)*uind(2,i)
-     &                + tdipdip(5,m)*uind(3,i)
-         fkmd(3) = tdipdip(3,m)*uind(1,i) + tdipdip(5,m)*uind(2,i)
-     &                + tdipdip(6,m)*uind(3,i)
-         fimp(1) = tdipdip(1,m)*uinp(1,k) + tdipdip(2,m)*uinp(2,k)
-     &                + tdipdip(3,m)*uinp(3,k)
-         fimp(2) = tdipdip(2,m)*uinp(1,k) + tdipdip(4,m)*uinp(2,k)
-     &                + tdipdip(5,m)*uinp(3,k)
-         fimp(3) = tdipdip(3,m)*uinp(1,k) + tdipdip(5,m)*uinp(2,k)
-     &                + tdipdip(6,m)*uinp(3,k)
-         fkmp(1) = tdipdip(1,m)*uinp(1,i) + tdipdip(2,m)*uinp(2,i)
-     &                + tdipdip(3,m)*uinp(3,i)
-         fkmp(2) = tdipdip(2,m)*uinp(1,i) + tdipdip(4,m)*uinp(2,i)
-     &                + tdipdip(5,m)*uinp(3,i)
-         fkmp(3) = tdipdip(3,m)*uinp(1,i) + tdipdip(5,m)*uinp(2,i)
-     &                + tdipdip(6,m)*uinp(3,i)
-c
+      do ipair = 1, npair
+         i=ta_dip_index(1,ipair)
+         k=ta_dip_index(2,ipair)
+
+         fimd(1) = ta_dipdip(1,ipair)*uind(1,k)+
+     &             ta_dipdip(2,ipair)*uind(2,k)+
+     &             ta_dipdip(3,ipair)*uind(3,k)
+         fimd(2) = ta_dipdip(2,ipair)*uind(1,k)+
+     &             ta_dipdip(4,ipair)*uind(2,k)+
+     &             ta_dipdip(5,ipair)*uind(3,k)
+         fimd(3) = ta_dipdip(3,ipair)*uind(1,k)+
+     &             ta_dipdip(5,ipair)*uind(2,k)+
+     &             ta_dipdip(6,ipair)*uind(3,k)
+         fkmd(1) = ta_dipdip(1,ipair)*uind(1,i)+
+     &             ta_dipdip(2,ipair)*uind(2,i)+
+     &             ta_dipdip(3,ipair)*uind(3,i)
+         fkmd(2) = ta_dipdip(2,ipair)*uind(1,i)+
+     &             ta_dipdip(4,ipair)*uind(2,i)+
+     &             ta_dipdip(5,ipair)*uind(3,i)
+         fkmd(3) = ta_dipdip(3,ipair)*uind(1,i)+
+     &             ta_dipdip(5,ipair)*uind(2,i)+
+     &             ta_dipdip(6,ipair)*uind(3,i)
+         fimp(1) = ta_dipdip(1,ipair)*uinp(1,k)+
+     &             ta_dipdip(2,ipair)*uinp(2,k)+
+     &             ta_dipdip(3,ipair)*uinp(3,k)
+         fimp(2) = ta_dipdip(2,ipair)*uinp(1,k)+
+     &             ta_dipdip(4,ipair)*uinp(2,k)+
+     &             ta_dipdip(5,ipair)*uinp(3,k)
+         fimp(3) = ta_dipdip(3,ipair)*uinp(1,k)+
+     &             ta_dipdip(5,ipair)*uinp(2,k)+
+     &             ta_dipdip(6,ipair)*uinp(3,k)
+         fkmp(1) = ta_dipdip(1,ipair)*uinp(1,i)+
+     &             ta_dipdip(2,ipair)*uinp(2,i)+
+     &             ta_dipdip(3,ipair)*uinp(3,i)
+         fkmp(2) = ta_dipdip(2,ipair)*uinp(1,i)+
+     &             ta_dipdip(4,ipair)*uinp(2,i)+
+     &             ta_dipdip(5,ipair)*uinp(3,i)
+         fkmp(3) = ta_dipdip(3,ipair)*uinp(1,i)+
+     &             ta_dipdip(5,ipair)*uinp(2,i)+
+     &             ta_dipdip(6,ipair)*uinp(3,i)
 c     increment the field at each site due to this interaction
 c
          do j = 1, 3
@@ -3228,8 +3331,8 @@ c
       character*6 mode
 c
 c
-c     zero out the induced dipoles at each site; uind and uinp are
-c     vacuum dipoles, uinds and uinps are SCRF dipoles
+c     zero out the induced dipoles at each site; uind & uinp are
+c     vacuum dipoles, uinds & uinps are SCRF dipoles
 c
       do i = 1, npole
          do j = 1, 3
@@ -3516,6 +3619,7 @@ c
             call fatal
          end if
       end if
+
 c
 c     perform deallocation of some local arrays
 c
@@ -3567,7 +3671,18 @@ c
       real*8 ck,uxk,uyk,uzk
       real*8 qxxk,qxyk,qxzk
       real*8 qyyk,qyzk,qzzk
-      real*8 dir,dkr
+      real*8 duix,duiy,duiz
+      real*8 puix,puiy,puiz
+      real*8 dukx,duky,dukz
+      real*8 pukx,puky,pukz
+      real*8 dir,duir,puir
+      real*8 dkr,dukr,pukr
+      real*8 duixs,duiys,duizs
+      real*8 puixs,puiys,puizs
+      real*8 dukxs,dukys,dukzs
+      real*8 pukxs,pukys,pukzs
+      real*8 duirs,puirs
+      real*8 dukrs,pukrs
       real*8 qix,qiy,qiz,qir
       real*8 qkx,qky,qkz,qkr
       real*8 damp,expdamp
@@ -3586,16 +3701,15 @@ c
       real*8 gqxz(4),gqyy(4)
       real*8 gqyz(4),gqzz(4)
       real*8 fid(3),fkd(3)
+      real*8 fip(3),fkp(3)
+      real*8 fids(3),fkds(3)
+      real*8 fips(3),fkps(3)
       real*8, allocatable :: dscale(:)
       real*8, allocatable :: pscale(:)
       real*8 field(3,*)
       real*8 fieldp(3,*)
       real*8 fields(3,*)
       real*8 fieldps(3,*)
-      real*8, allocatable :: fieldt(:,:)
-      real*8, allocatable :: fieldtp(:,:)
-      real*8, allocatable :: fieldts(:,:)
-      real*8, allocatable :: fieldtps(:,:)
       logical proceed
 c
 c
@@ -3628,41 +3742,6 @@ c
          dscale(i) = 1.0d0
          pscale(i) = 1.0d0
       end do
-c
-c     perform dynamic allocation of some local arrays
-c
-      allocate (fieldt(3,npole))
-      allocate (fieldtp(3,npole))
-      allocate (fieldts(3,npole))
-      allocate (fieldtps(3,npole))
-c
-c     set OpenMP directives for the major loop structure
-c
-!$OMP PARALLEL default(private) shared(npole,ipole,pdamp,thole,rborn,
-!$OMP& rpole,n12,n13,n14,n15,np11,np12,np13,np14,i12,i13,i14,i15,
-!$OMP% ip11,ip12,ip13,ip14,p2scale,p3scale,p4scale,p41scale,p5scale,
-!$OMP& d1scale,d2scale,d3scale,d4scale,use_intra,x,y,z,off2,fc,fd,fq,
-!$OMP& gkc,field,fieldp,fields,fieldps)
-!$OMP& firstprivate(dscale,pscale)
-!$OMP% shared(fieldt,fieldtp,fieldts,fieldtps)
-c
-c     initialize local variables for OpenMP calculation
-c
-!$OMP DO collapse(2)
-      do i = 1, npole
-         do j = 1, 3
-            fieldt(j,i) = 0.0d0
-            fieldtp(j,i) = 0.0d0
-            fieldts(j,i) = 0.0d0
-            fieldtps(j,i) = 0.0d0
-         end do
-      end do
-!$OMP END DO
-c
-c     find the field terms for each pairwise interaction
-c
-!$OMP DO reduction(+:fieldt,fieldtp,fieldts,fieldtps)
-!$OMP& schedule(guided)
 c
 c     compute the direct induced dipole moment at each atom, and
 c     another set that also includes RF due to permanent multipoles
@@ -3780,10 +3859,10 @@ c
                      fkd(3) = zr*(rr3*ci+rr5*dir+rr7*qir)
      &                           - rr3*uzi - 2.0d0*rr5*qiz
                      do j = 1, 3
-                        fieldt(j,i) = fieldt(j,i) + fid(j)*dscale(kk)
-                        fieldt(j,k) = fieldt(j,k) + fkd(j)*dscale(kk)
-                        fieldtp(j,i) = fieldtp(j,i) + fid(j)*pscale(kk)
-                        fieldtp(j,k) = fieldtp(j,k) + fkd(j)*pscale(kk)
+                        field(j,i) = field(j,i) + fid(j)*dscale(kk)
+                        field(j,k) = field(j,k) + fkd(j)*dscale(kk)
+                        fieldp(j,i) = fieldp(j,i) + fid(j)*pscale(kk)
+                        fieldp(j,k) = fieldp(j,k) + fkd(j)*pscale(kk)
                      end do
                   end if
 c
@@ -3950,10 +4029,10 @@ c
                      end do
                   end if
                   do j = 1, 3
-                     fieldts(j,i) = fieldts(j,i) + fid(j)
-                     fieldts(j,k) = fieldts(j,k) + fkd(j)
-                     fieldtps(j,i) = fieldtps(j,i) + fid(j)
-                     fieldtps(j,k) = fieldtps(j,k) + fkd(j)
+                     fields(j,i) = fields(j,i) + fid(j)
+                     fields(j,k) = fields(j,k) + fkd(j)
+                     fieldps(j,i) = fieldps(j,i) + fid(j)
+                     fieldps(j,k) = fieldps(j,k) + fkd(j)
                   end do
                end if
             end if
@@ -3986,41 +4065,21 @@ c
             dscale(ip14(j,ii)) = 1.0d0
          end do
       end do
-!$OMP END DO
 c
-c     add local copies to global variables for OpenMP calculation
+c     perform deallocation of some local arrays
 c
-!$OMP DO
-      do i = 1, npole
-         do j = 1, 3
-            field(j,i) = field(j,i) + fieldt(j,i)
-            fieldp(j,i) = fieldp(j,i) + fieldtp(j,i)
-            fields(j,i) = fields(j,i) + fieldts(j,i)
-            fieldps(j,i) = fieldps(j,i) + fieldtps(j,i)
-         end do
-      end do
-!$OMP END DO
+      deallocate (dscale)
+      deallocate (pscale)
 c
 c     combine permanent multipole field and GK reaction field
 c
-!$OMP DO
+c
       do i = 1, npole
          do j = 1, 3
             fields(j,i) = field(j,i) + fields(j,i)
             fieldps(j,i) = fieldp(j,i) + fieldps(j,i)
          end do
       end do
-!$OMP END DO
-!$OMP END PARALLEL
-c
-c     perform deallocation of some local arrays
-c
-      deallocate (dscale)
-      deallocate (pscale)
-      deallocate (fieldt)
-      deallocate (fieldtp)
-      deallocate (fieldts)
-      deallocate (fieldtps)
       return
       end
 c
@@ -4058,8 +4117,8 @@ c
       real*8 puix,puiy,puiz
       real*8 dukx,duky,dukz
       real*8 pukx,puky,pukz
-      real*8 duir,dukr
-      real*8 puir,pukr
+      real*8 dir,duir,puir
+      real*8 dkr,dukr,pukr
       real*8 duixs,duiys,duizs
       real*8 puixs,puiys,puizs
       real*8 dukxs,dukys,dukzs
@@ -4086,10 +4145,6 @@ c
       real*8 fieldp(3,*)
       real*8 fields(3,*)
       real*8 fieldps(3,*)
-      real*8, allocatable :: fieldt(:,:)
-      real*8, allocatable :: fieldtp(:,:)
-      real*8, allocatable :: fieldts(:,:)
-      real*8, allocatable :: fieldtps(:,:)
       logical proceed
 c
 c
@@ -4118,39 +4173,6 @@ c
       do i = 1, n
          dscale(i) = 1.0d0
       end do
-c
-c     perform dynamic allocation of some local arrays
-c
-      allocate (fieldt(3,npole))
-      allocate (fieldtp(3,npole))
-      allocate (fieldts(3,npole))
-      allocate (fieldtps(3,npole))
-c
-c     set OpenMP directives for the major loop structure
-c
-!$OMP PARALLEL default(private) shared(npole,ipole,pdamp,thole,rborn,
-!$OMP& uind,uinp,uinds,uinps,np11,np12,np13,np14,ip11,ip12,ip13,ip14,
-!$OMP& u1scale,u2scale,u3scale,u4scale,use_intra,x,y,z,off2,fd,gkc,
-!$OMP& field,fieldp,fields,fieldps)
-!$OMP& firstprivate(dscale) shared(fieldt,fieldtp,fieldts,fieldtps)
-c
-c     initialize local variables for OpenMP calculation
-c
-!$OMP DO collapse(2)
-      do i = 1, npole
-         do j = 1, 3
-            fieldt(j,i) = 0.0d0
-            fieldtp(j,i) = 0.0d0
-            fieldts(j,i) = 0.0d0
-            fieldtps(j,i) = 0.0d0
-         end do
-      end do
-!$OMP END DO
-c
-c     find the field terms for each pairwise interaction
-c
-!$OMP DO reduction(+:fieldt,fieldtp,fieldts,fieldtps)
-!$OMP& schedule(guided)
 c
 c     compute the mutual electrostatic field at each atom,
 c     and another field including RF due to induced dipoles
@@ -4260,14 +4282,14 @@ c
                      fkps(2) = -rr3*puiys + rr5*puirs*yr
                      fkps(3) = -rr3*puizs + rr5*puirs*zr
                      do j = 1, 3
-                        fieldt(j,i) = fieldt(j,i) + fid(j)
-                        fieldt(j,k) = fieldt(j,k) + fkd(j)
-                        fieldtp(j,i) = fieldtp(j,i) + fip(j)
-                        fieldtp(j,k) = fieldtp(j,k) + fkp(j)
-                        fieldts(j,i) = fieldts(j,i) + fids(j)
-                        fieldts(j,k) = fieldts(j,k) + fkds(j)
-                        fieldtps(j,i) = fieldtps(j,i) + fips(j)
-                        fieldtps(j,k) = fieldtps(j,k) + fkps(j)
+                        field(j,i) = field(j,i) + fid(j)
+                        field(j,k) = field(j,k) + fkd(j)
+                        fieldp(j,i) = fieldp(j,i) + fip(j)
+                        fieldp(j,k) = fieldp(j,k) + fkp(j)
+                        fields(j,i) = fields(j,i) + fids(j)
+                        fields(j,k) = fields(j,k) + fkds(j)
+                        fieldps(j,i) = fieldps(j,i) + fips(j)
+                        fieldps(j,k) = fieldps(j,k) + fkps(j)
                      end do
                   end if
 c
@@ -4315,10 +4337,10 @@ c
                      end do
                   end if
                   do j = 1, 3
-                     fieldts(j,i) = fieldts(j,i) + fids(j)
-                     fieldts(j,k) = fieldts(j,k) + fkds(j)
-                     fieldtps(j,i) = fieldtps(j,i) + fips(j)
-                     fieldtps(j,k) = fieldtps(j,k) + fkps(j)
+                     fields(j,i) = fields(j,i) + fids(j)
+                     fields(j,k) = fields(j,k) + fkds(j)
+                     fieldps(j,i) = fieldps(j,i) + fips(j)
+                     fieldps(j,k) = fieldps(j,k) + fkps(j)
                   end do
                end if
             end if
@@ -4339,29 +4361,10 @@ c
             dscale(ip14(j,ii)) = 1.0d0
          end do
       end do
-!$OMP END DO
-c
-c     add local copies to global variables for OpenMP calculation
-c
-!$OMP DO
-      do i = 1, npole
-         do j = 1, 3
-            field(j,i) = field(j,i) + fieldt(j,i)
-            fieldp(j,i) = fieldp(j,i) + fieldtp(j,i)
-            fields(j,i) = fields(j,i) + fieldts(j,i)
-            fieldps(j,i) = fieldps(j,i) + fieldtps(j,i)
-         end do
-      end do
-!$OMP END DO
-!$OMP END PARALLEL
 c
 c     perform deallocation of some local arrays
 c
       deallocate (dscale)
-      deallocate (fieldt)
-      deallocate (fieldtp)
-      deallocate (fieldts)
-      deallocate (fieldtps)
       return
       end
 c
@@ -5478,15 +5481,12 @@ c
             dscale(i) = 1.0d0
          end do
 c
-c     determine the off-diagonal elements of the preconditioner
+c     use a double loop to compute the off-diagonal elements
 c
          off2 = usolvcut * usolvcut
          m = 0
          do i = 1, npole-1
             ii = ipole(i)
-            xi = x(ii)
-            yi = y(ii)
-            zi = z(ii)
             pdi = pdamp(i)
             pti = thole(i)
             poli = polarity(i)
@@ -5507,9 +5507,9 @@ c
             end do
             do k = i+1, npole
                kk = ipole(k)
-               xr = x(kk) - xi
-               yr = y(kk) - yi
-               zr = z(kk) - zi
+               xr = x(kk) - x(ii)
+               yr = y(kk) - y(ii)
+               zr = z(kk) - z(ii)
                call image (xr,yr,zr)
                r2 = xr*xr + yr* yr + zr*zr
                if (r2 .le. off2) then
@@ -5628,11 +5628,12 @@ c
                zrsdtp(j,i) = poli * rsdp(j,i)
             end do
          end do
+
 c
-c     use the off-diagonal preconditioner elements in second phase
+c     set OpenMP directives for the major loop structure
 c
-!$OMP PARALLEL default(private) shared(npole,mindex,minv,nulst,ulst,
-!$OMP& rsd,rsdp,zrsd,zrsdp,zrsdt,zrsdtp)
+!$OMP PARALLEL default(shared) private(i,k,m,kk,m1,m2,m3,m4,m5,m6)
+!$OMP& firstprivate(dscale)
 !$OMP DO reduction(+:zrsdt,zrsdtp) schedule(guided)
          do i = 1, npole
             m = mindex(i)
@@ -5673,7 +5674,7 @@ c
          end do
 !$OMP END DO
 c
-c     transfer the results from local to global arrays
+c     end OpenMP directives for the major loop structure
 c
 !$OMP DO
          do i = 1, npole
@@ -5711,19 +5712,12 @@ c
 c
 c     set OpenMP directives for the major loop structure
 c
-!$OMP PARALLEL default(private) shared(n,npole,ipole,x,y,z,pdamp,
-!$OMP& thole,polarity,u1scale,u2scale,u3scale,u4scale,np11,ip11,
-!$OMP& np12,ip12,np13,ip13,np14,ip14,nulst,ulst,mindex,minv)
-!$OMP& firstprivate (dscale)
-c
-c     determine the off-diagonal elements of the preconditioner
-c
+!$OMP PARALLEL default(shared) private(xr,yr,zr,r,r2,rr3,rr5,pdi,pti,
+!$OMP& poli,polik,pgamma,damp,expdamp,scale3,scale5,i,j,k,m,ii,kk,kkk)
+!$OMP& firstprivate(dscale)
 !$OMP DO schedule(guided)
          do i = 1, npole
             ii = ipole(i)
-            xi = x(ii)
-            yi = y(ii)
-            zi = z(ii)
             pdi = pdamp(i)
             pti = thole(i)
             poli = polarity(i)
@@ -5743,9 +5737,9 @@ c
             do kkk = 1, nulst(i)
                k = ulst(kkk,i)
                kk = ipole(k)
-               xr = x(kk) - xi
-               yr = y(kk) - yi
-               zr = z(kk) - zi
+               xr = x(kk) - x(ii)
+               yr = y(kk) - y(ii)
+               zr = z(kk) - z(ii)
                call image (xr,yr,zr)
                r2 = xr*xr + yr* yr + zr*zr
                r = sqrt(r2)

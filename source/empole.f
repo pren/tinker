@@ -112,7 +112,6 @@ c     zero out the multipole and polarization energies
 c
       em = 0.0d0
       ep = 0.0d0
-      if (npole .eq. 0)  return
 c
 c     check the sign of multipole components at chiral sites
 c
@@ -133,6 +132,7 @@ c
 c
 c     set arrays needed to scale connected atom interactions
 c
+      if (npole .eq. 0)  return
       do i = 1, n
          mscale(i) = 1.0d0
          pscale(i) = 1.0d0
@@ -619,7 +619,6 @@ c
       real*8 qkx,qky,qkz
       real*8 scale3,scale5
       real*8 scale7
-      real*8 emtt,eptt
       real*8 sc(10),sci(8)
       real*8 gl(0:4),gli(3)
       real*8, allocatable :: mscale(:)
@@ -632,7 +631,6 @@ c     zero out the multipole and polarization energies
 c
       em = 0.0d0
       ep = 0.0d0
-      if (npole .eq. 0)  return
 c
 c     check the sign of multipole components at chiral sites
 c
@@ -653,6 +651,7 @@ c
 c
 c     set arrays needed to scale connected atom interactions
 c
+      if (npole .eq. 0)  return
       do i = 1, n
          mscale(i) = 1.0d0
          pscale(i) = 1.0d0
@@ -663,23 +662,6 @@ c
       f = electric / dielec
       mode = 'MPOLE'
       call switch (mode)
-c
-c     initialize local variables for OpenMP calculation
-c
-      emtt = 0.0d0
-      eptt = 0.0d0
-c
-c     set OpenMP directives for the major loop structure
-c
-!$OMP PARALLEL default(shared) firstprivate(f) 
-!$OMP& private(i,j,k,ii,kk,kkk,e,ei,damp,expdamp,pdi,pti,pgamma,
-!$OMP& scale3,scale5,scale7,xr,yr,zr,r,r2,rr1,rr3,rr5,rr7,rr9,
-!$OMP& ci,dix,diy,diz,qixx,qixy,qixz,qiyy,qiyz,qizz,uix,uiy,uiz,
-!$OMP& ck,dkx,dky,dkz,qkxx,qkxy,qkxz,qkyy,qkyz,qkzz,ukx,uky,ukz,
-!$OMP& fgrp,fm,fp,sc,gl,sci,gli)
-!$OMP& firstprivate(mscale,pscale)
-!$OMP DO reduction(+:emtt,eptt)
-!$OMP& schedule(guided)
 c
 c     calculate the multipole interaction energy term
 c
@@ -857,8 +839,8 @@ c                    ei = ei * fgrp
 c
 c     increment the overall multipole and polarization energies
 c
-                  emtt = emtt + e
-                  eptt = eptt + ei
+                  em = em + e
+                  ep = ep + ei
                end if
             end if
          end do
@@ -882,16 +864,6 @@ c
             pscale(i15(j,ii)) = 1.0d0
          end do
       end do
-c
-c     end OpenMP directives for the major loop structure
-c
-!$OMP END DO
-!$OMP END PARALLEL
-c
-c     add local copies to global variables for OpenMP calculation
-c
-      em = em + emtt
-      ep = ep + eptt
 c
 c     perform deallocation of some local arrays
 c
@@ -940,7 +912,6 @@ c     zero out the multipole and polarization energies
 c
       em = 0.0d0
       ep = 0.0d0
-      if (npole .eq. 0)  return
 c
 c     set the energy unit conversion factor
 c
@@ -1102,6 +1073,7 @@ c
 c
 c     set arrays needed to scale connected atom interactions
 c
+      if (npole .eq. 0)  return
       do i = 1, n
          mscale(i) = 1.0d0
          pscale(i) = 1.0d0
@@ -1563,7 +1535,6 @@ c     zero out the multipole and polarization energies
 c
       em = 0.0d0
       ep = 0.0d0
-      if (npole .eq. 0)  return
 c
 c     set the energy unit conversion factor
 c
@@ -1726,6 +1697,7 @@ c
 c
 c     set arrays needed to scale connected atom interactions
 c
+      if (npole .eq. 0)  return
       do i = 1, n
          mscale(i) = 1.0d0
          pscale(i) = 1.0d0
@@ -1753,7 +1725,7 @@ c
 !$OMP& bn,sc,gl,sci,gli)
 !$OMP& firstprivate(mscale,pscale)
 !$OMP DO reduction(+:emtt,eptt)
-!$OMP& schedule(guided)
+!$OMP& schedule(dynamic)
 c
 c     compute the real space portion of the Ewald summation
 c
@@ -2139,6 +2111,7 @@ c
       end do
       e = 0.5d0 * electric * e
       em = em + e
+c      write(*,*) "erecip",e
 c
 c     convert Cartesian induced dipoles to fractional coordinates
 c
@@ -2166,6 +2139,7 @@ c
          e = 0.5d0 * electric * e
          ep = ep + e
       end if
+      
 c
 c     perform deallocation of some local arrays
 c

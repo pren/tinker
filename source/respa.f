@@ -216,7 +216,7 @@ c
 c     compute statistics and save trajectory for this step
 c
       call mdstat (istep,dt,etot,epot,eksum,temp,pres)
-      call mdsave (istep,dt,epot,eksum)
+      call mdsave (istep,dt,epot)
       call mdrest (istep)
       return
       end
@@ -235,8 +235,11 @@ c
 c
       subroutine gradfast (energy,derivs)
       implicit none
+      include 'sizes.i'
       include 'cutoff.i'
       include 'potent.i'
+      include 'mutant.i'
+      include 'osrwi.i'
       real*8 energy
       real*8 derivs(3,*)
       logical save_vdw,save_charge
@@ -244,6 +247,15 @@ c
       logical save_mpole,save_polar
       logical save_rxnfld,save_solv
       logical save_list
+      logical propagateLambdaOld, osrwonold
+      
+c
+c     JRA Lambda moves along with slow-evolving potentials only
+c      
+      propagateLambdaOld = propagateLambda
+      osrwonold = osrwon
+      propagateLambda = .false.
+      osrwon = .false.
 c
 c
 c     save the original state of slow-evolving potentials
@@ -285,6 +297,11 @@ c
       use_rxnfld = save_rxnfld
       use_solv = save_solv
       use_list = save_list
+      
+c     JRA return to original state
+      propagateLambda = propagateLambdaOld
+      osrwon = osrwonold
+      
       return
       end
 c
